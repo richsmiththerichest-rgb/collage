@@ -16,7 +16,10 @@
     --marigold:#e0a02c;
     --mute:#8fa6ae;
     --r:3px;
+    --gap:#ec5f8a;
+    --hb:14px;
   }
+  @media (pointer:coarse){ :root{--hb:20px} }
   *{box-sizing:border-box}
   html,body{height:100%}
   body{
@@ -39,6 +42,7 @@
   }
   aside.left{border-right:1px solid var(--line)}
   aside.right{border-left:1px solid var(--line)}
+  #stage{touch-action:none}
   main{
     flex:1 1 auto;min-width:0;display:flex;align-items:center;justify-content:center;
     padding:16px;overflow:auto;position:relative;
@@ -92,7 +96,7 @@
 
   /* stage */
   #frame{position:relative;flex:0 0 auto;box-shadow:0 18px 50px #0009}
-  #canvas{position:relative;transform-origin:0 0;overflow:hidden;
+  #canvas{position:relative;transform-origin:0 0;overflow:hidden;--k:1;--s:calc(var(--hb)*var(--k));
     background-image:linear-gradient(45deg,#ccc 25%,transparent 25%),linear-gradient(-45deg,#ccc 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#ccc 75%),linear-gradient(-45deg,transparent 75%,#ccc 75%);
     background-size:24px 24px;background-position:0 0,0 12px,12px -12px,-12px 0}
   #bgfill{position:absolute;inset:0}
@@ -100,15 +104,27 @@
   .item .pic{position:absolute;inset:0;background-repeat:no-repeat;background-origin:border-box}
   .item .pic video{position:absolute;left:0;top:0;object-fit:fill;pointer-events:none;display:block}
   .item .txt{position:absolute;inset:0;white-space:pre;overflow:visible}
-  .item.sel .box{position:absolute;inset:0;outline:1.5px solid var(--marigold);pointer-events:none}
-  .h{position:absolute;width:14px;height:14px;background:var(--marigold);border:1px solid #0006;display:none;z-index:5}
+  .item.sel .box{position:absolute;inset:0;outline:calc(1.5px*var(--k)) solid var(--marigold);pointer-events:none}
+  .item.crop .box{outline-style:dashed}
+  .item .ghost{position:absolute;display:none;opacity:.35;pointer-events:none;background-size:100% 100%;background-repeat:no-repeat}
+  .item.crop .ghost{display:block}
+  .h{position:absolute;width:var(--s);height:var(--s);background:var(--marigold);border:1px solid #0006;display:none;z-index:5}
   .item.sel .h{display:block}
-  .h.nw{left:-7px;top:-7px;cursor:nwse-resize}
-  .h.ne{right:-7px;top:-7px;cursor:nesw-resize}
-  .h.sw{left:-7px;bottom:-7px;cursor:nesw-resize}
-  .h.se{right:-7px;bottom:-7px;cursor:nwse-resize}
-  .h.rot{left:50%;top:-30px;margin-left:-7px;border-radius:50%;cursor:grab}
-  .guide{position:absolute;background:var(--marigold);pointer-events:none;z-index:9}
+  .item.t-text .h.side{display:none!important}
+  .h.nw{left:calc(var(--s)/-2);top:calc(var(--s)/-2);cursor:nwse-resize}
+  .h.ne{right:calc(var(--s)/-2);top:calc(var(--s)/-2);cursor:nesw-resize}
+  .h.sw{left:calc(var(--s)/-2);bottom:calc(var(--s)/-2);cursor:nesw-resize}
+  .h.se{right:calc(var(--s)/-2);bottom:calc(var(--s)/-2);cursor:nwse-resize}
+  .h.n,.h.s{width:calc(var(--s)*1.6);height:calc(var(--s)*.6);left:50%;margin-left:calc(var(--s)*-.8);border-radius:var(--s);cursor:ns-resize}
+  .h.e,.h.w{height:calc(var(--s)*1.6);width:calc(var(--s)*.6);top:50%;margin-top:calc(var(--s)*-.8);border-radius:var(--s);cursor:ew-resize}
+  .h.n{top:calc(var(--s)*-.3)} .h.s{bottom:calc(var(--s)*-.3)}
+  .h.w{left:calc(var(--s)*-.3)} .h.e{right:calc(var(--s)*-.3)}
+  .h.rot{left:50%;top:calc(var(--s)*-2.4);margin-left:calc(var(--s)/-2);border-radius:50%;cursor:grab}
+  .guide{position:absolute;background:var(--marigold);pointer-events:none;z-index:99999}
+  .gap{position:absolute;background:var(--gap);pointer-events:none;z-index:99999}
+  .gap::after{content:attr(data-v);position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+    background:var(--gap);color:#fff;font:calc(10px*var(--k))/1.3 ui-monospace,monospace;
+    padding:0 calc(3px*var(--k));border-radius:calc(2px*var(--k));white-space:nowrap}
   #empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;
     color:#0d181caa;font:400 15px/1.6 Georgia,serif;padding:24px;pointer-events:none}
   #status{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);background:#0d181cf2;
@@ -152,7 +168,9 @@
       </div>
       <input type="file" id="file" accept="image/*" multiple hidden>
       <input type="file" id="vfile" accept="video/*" multiple hidden>
-      <p class="empty-note" id="count" style="margin:7px 0 0">Drop image or video files anywhere too.</p>
+      <button id="addFont" style="margin-top:6px">Import font</button>
+      <input type="file" id="ffile" multiple hidden>
+      <p class="empty-note" id="count" style="margin:7px 0 0">Drop images, videos or fonts anywhere too.</p>
     </section>
 
     <section>
@@ -203,7 +221,7 @@
         <button data-al="fill">Fill</button><button data-al="fit">Fit</button><button data-al="native">Actual</button>
       </div>
       <div class="row" style="margin-top:6px">
-        <label class="empty-note"><input type="checkbox" id="snap" checked style="width:auto"> Snap to edges &amp; centres</label>
+        <label class="empty-note"><input type="checkbox" id="snap" checked style="width:auto"> Snap to edges, centres, thirds &amp; spacing</label>
       </div>
     </section>
 
@@ -276,7 +294,7 @@
         <span class="lbl" style="margin-top:12px">Crop</span>
         <div class="sl"><span class="lbl">Zoom</span><b id="zmV">1.00×</b></div>
         <input type="range" id="zm" min="100" max="500" value="100">
-        <p class="empty-note"><kbd>Shift</kbd>+drag on the photo moves the crop.</p>
+        <p class="empty-note">Double-tap the photo to crop: drag to reposition, pinch or scroll to zoom. Side handles trim the frame.</p>
 
         <span class="lbl" style="margin-top:12px">Colour</span>
         <div class="sl"><span class="lbl">Brightness</span><b id="briV">100%</b></div>
@@ -360,10 +378,11 @@
           <kbd>⌘/Ctrl D</kbd> duplicate · <kbd>Del</kbd> remove<br>
           <kbd>[</kbd> <kbd>]</kbd> layer order · <kbd>Esc</kbd> deselect<br>
           Arrows nudge, <kbd>Shift</kbd>+arrows nudge 10<br>
-          <kbd>Shift</kbd> while resizing keeps proportions<br>
+          <kbd>Shift</kbd> while resizing a shape keeps proportions<br>
+          Double-tap a photo to crop, again to finish<br>
           <kbd>Shift</kbd> while rotating snaps to 15°<br>
           Scroll over a photo zooms its crop<br><br>
-          No network requests, no cookies, no storage. Photos are read in the browser and vanish on refresh unless you save a project file.
+          No network requests, no cookies, no storage. Photos and fonts are read in the browser and vanish on refresh unless you save a project file.
         </p>
       </details>
     </section>
@@ -419,6 +438,7 @@ function fit(){
   view=Math.min(aw/W, ah/H, 1);
   canvas.style.width=W+'px'; canvas.style.height=H+'px';
   canvas.style.transform=`scale(${view})`;
+  canvas.style.setProperty('--k', 1/view);
   frame.style.width=(W*view)+'px'; frame.style.height=(H*view)+'px';
   $('dims').textContent=W+' × '+H;
 }
@@ -497,8 +517,41 @@ function addVideoFromFile(f){
   probe.src=url;
   probe.load();
 }
+/* ─── imported fonts ─── */
+const FONTS=new Map();               // family -> base64 font data (embedded in project files)
+const isFont=f=>/\.(ttf|otf|woff2?)$/i.test(f.name);
+function b64(buf){ const u=new Uint8Array(buf); let s=''; for(let i=0;i<u.length;i+=0x8000) s+=String.fromCharCode.apply(null,u.subarray(i,i+0x8000)); return btoa(s); }
+function unb64(s){ const b=atob(s), u=new Uint8Array(b.length); for(let i=0;i<b.length;i++) u[i]=b.charCodeAt(i); return u.buffer; }
+function addFont(fam,buf,data){
+  data=data||b64(buf);
+  return new FontFace(fam,buf).load().then(f=>{
+    document.fonts.add(f);
+    const val=`'${fam}', sans-serif`;
+    if(!FONTS.has(fam)){ const o=document.createElement('option'); o.value=val; o.textContent=fam; $('tfont').appendChild(o); }
+    FONTS.set(fam,data);
+    items.forEach(i=>{ if(i.type==='text'&&i.font===val) sync(i); });
+    return val;
+  });
+}
+function readFont(f){
+  const fam=f.name.replace(/\.(ttf|otf|woff2?)$/i,'').replace(/['"\\]/g,'').trim()||'Imported font';
+  const r=new FileReader();
+  r.onload=()=>addFont(fam,r.result).then(val=>{
+    if(sel&&sel.type==='text'){ sel.font=val; sync(sel); fillInspector(); commit(); }
+    say(`Font “${fam}” added.`);
+  }).catch(()=>say(`Couldn't load ${f.name} as a font.`));
+  r.onerror=()=>say("Could not read "+f.name);
+  r.readAsArrayBuffer(f);
+}
+$('addFont').onclick=()=>$('ffile').click();
+$('ffile').onchange=e=>{
+  [...e.target.files].forEach(f=>isFont(f)?readFont(f):say(f.name+" isn't a .ttf, .otf, .woff or .woff2 file."));
+  e.target.value='';
+};
+
 function readFiles(list){
   [...list].forEach(f=>{
+    if(isFont(f)) return readFont(f);
     if(f.type.startsWith('video/') || /\.(mov|mp4|m4v|webm)$/i.test(f.name)) return addVideoFromFile(f);
     if(!f.type.startsWith('image/')) return;
     const r=new FileReader();
@@ -547,14 +600,17 @@ function textMetrics(it){
 
 /* ─── DOM mount / sync ─── */
 function mount(it){
-  const el=document.createElement('div'); el.className='item'; el.dataset.id=it.id;
+  const el=document.createElement('div'); el.className='item t-'+it.type; el.dataset.id=it.id;
   el.innerHTML='<div class="box"></div>'+
     '<div class="h nw" data-h="nw"></div><div class="h ne" data-h="ne"></div>'+
     '<div class="h sw" data-h="sw"></div><div class="h se" data-h="se"></div>'+
+    '<div class="h side n" data-h="n"></div><div class="h side s" data-h="s"></div>'+
+    '<div class="h side e" data-h="e"></div><div class="h side w" data-h="w"></div>'+
     '<div class="h rot" data-h="rot"></div>';
   const inner=document.createElement('div');
   inner.className = it.type==='text' ? 'txt' : 'pic';
   el.insertBefore(inner, el.firstChild);
+  if(it.type==='photo'){ const gh=document.createElement('div'); gh.className='ghost'; el.insertBefore(gh, inner); it.ghost=gh; }
   if(it.type==='video'){
     const v=document.createElement('video');
     v.playsInline=true; v.setAttribute('playsinline','');
@@ -586,15 +642,21 @@ function sync(it){
       n.style.backgroundImage=`url(${IMG.get(it.src).src})`;
       n.style.backgroundSize=g.dw+'px '+g.dh+'px';
       n.style.backgroundPosition=(-g.ox)+'px '+(-g.oy)+'px';
+      if(it===cropIt){
+        const G=it.ghost.style;
+        G.width=g.dw+'px'; G.height=g.dh+'px';
+        G.left=(it.flipH? it.w+g.ox-g.dw : -g.ox)+'px';
+        G.top=(it.flipV? it.h+g.oy-g.dh : -g.oy)+'px';
+        G.transform=`scale(${it.flipH?-1:1},${it.flipV?-1:1})`;
+      }
     }
     n.style.filter=fxString(it,1);
     n.style.transform=`scale(${it.flipH?-1:1},${it.flipV?-1:1})`;
     s.borderRadius=it.mask==='ellipse'?'50%':it.rad+'px';
     n.style.borderRadius=s.borderRadius;
-    s.overflow='hidden';
+    s.overflow='visible'; n.style.overflow='hidden';   // clip at the photo, so handles aren't cut off
     s.boxShadow=(it.bw?`inset 0 0 0 ${it.bw}px ${it.bc}`:'')+
       (it.bw&&it.sh?', ':'')+(it.sh?`0 ${it.sh*.35}px ${it.sh}px rgba(0,0,0,.4)`:'');
-    if(it.sh) s.overflow='visible', n.style.overflow='hidden';
   }
   if(it.type==='shape'){
     n.style.background=it.fill;
@@ -612,6 +674,7 @@ const syncAll=()=>items.forEach(sync);
 function select(it){
   if(sel&&sel.el) sel.el.classList.remove('sel');
   sel=it||null;
+  if(cropIt&&cropIt!==sel) endCrop();
   if(sel) sel.el.classList.add('sel');
   $('insp').hidden=!sel; $('nosel').hidden=!!sel;
   if(sel){
@@ -625,14 +688,47 @@ function select(it){
 }
 
 /* ─── interaction ─── */
+let cropIt=null;
+const tap={it:null,t:0};
+function endCrop(){ if(!cropIt) return; cropIt.el.classList.remove('crop'); cropIt=null; }
+function toggleCrop(it){
+  if(cropIt===it) return endCrop();
+  endCrop(); cropIt=it; it.el.classList.add('crop');
+  if(it.ghost) it.ghost.style.backgroundImage=it.inner.style.backgroundImage;
+  sync(it); say("Cropping — drag to reposition, pinch or scroll to zoom, double-tap to finish.");
+}
+
+/* two-finger pinch zooms the crop while cropping */
+const touches=new Map(); let pinch=null;
+const tdist=()=>{ const [a,b]=[...touches.values()]; return Math.max(1,Math.hypot(a.x-b.x,a.y-b.y)); };
+addEventListener('pointerdown',e=>{
+  if(e.pointerType!=='touch') return;
+  touches.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(touches.size===2&&cropIt) pinch={d:tdist(),z:cropIt.zoom};
+},true);
+addEventListener('pointermove',e=>{
+  if(!touches.has(e.pointerId)) return;
+  touches.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(pinch&&cropIt&&touches.size===2){ cropIt.zoom=clamp(pinch.z*tdist()/pinch.d,1,6); sync(cropIt); refreshVals(); }
+},true);
+const tEnd=e=>{ touches.delete(e.pointerId); if(pinch&&touches.size<2){ pinch=null; commit(); } };
+addEventListener('pointerup',tEnd,true); addEventListener('pointercancel',tEnd,true);
+
 function bind(it){
-  let mode=null, lx=0, ly=0, ratio=1, startAng=0, startRot=0;
+  let mode=null, pid=null, lx=0, ly=0, st=null, startAng=0, startRot=0;
   const el=it.el;
   el.addEventListener('pointerdown',e=>{
+    if(mode||touches.size>1) return;
     select(it);
     const h=e.target.dataset.h;
-    mode = h ? (h==='rot'?'rot':'size:'+h) : (e.shiftKey && isPic(it) ? 'focus' : 'move');
-    lx=e.clientX; ly=e.clientY; ratio=it.w/it.h;
+    if(!h&&isPic(it)){
+      const now=performance.now();
+      if(tap.it===it&&now-tap.t<320){ tap.t=0; toggleCrop(it); e.preventDefault(); e.stopPropagation(); return; }
+      tap.it=it; tap.t=now;
+    }
+    mode = h ? (h==='rot'?'rot':'size:'+h) : ((e.shiftKey||cropIt===it) && isPic(it) ? 'focus' : 'move');
+    pid=e.pointerId; lx=e.clientX; ly=e.clientY;
+    st={px:e.clientX,py:e.clientY,x:it.x,y:it.y,w:it.w,h:it.h,size:it.size,g:isPic(it)?geo(it):null};
     if(mode==='rot'){
       const c=centerClient(it);
       startAng=Math.atan2(e.clientY-c.y, e.clientX-c.x)*180/Math.PI;
@@ -641,14 +737,17 @@ function bind(it){
     el.setPointerCapture(e.pointerId); e.preventDefault(); e.stopPropagation();
   });
   el.addEventListener('pointermove',e=>{
-    if(!mode) return;
+    if(!mode||e.pointerId!==pid) return;
     const dx=(e.clientX-lx)/view, dy=(e.clientY-ly)/view;
     lx=e.clientX; ly=e.clientY;
-    if(mode==='move'){ it.x+=dx; it.y+=dy; snapMove(it); }
+    if(touches.size>1) return;
+    const tx=(e.clientX-st.px)/view, ty=(e.clientY-st.py)/view;
+    if(mode==='move'){ it.x=st.x+tx; it.y=st.y+ty; snapMove(it); }
     else if(mode==='focus'){
-      const g=geo(it);
-      if(g.dw>it.w) it.fx=clamp(it.fx-dx/(g.dw-it.w),0,1);
-      if(g.dh>it.h) it.fy=clamp(it.fy-dy/(g.dh-it.h),0,1);
+      const g=geo(it), r=it.rot*Math.PI/180, cs=Math.cos(r), sn=Math.sin(r);
+      const ux=(dx*cs+dy*sn)*(it.flipH?-1:1), uy=(-dx*sn+dy*cs)*(it.flipV?-1:1);
+      if(g.dw>it.w) it.fx=clamp(it.fx-ux/(g.dw-it.w),0,1);
+      if(g.dh>it.h) it.fy=clamp(it.fy-uy/(g.dh-it.h),0,1);
     }
     else if(mode==='rot'){
       const c=centerClient(it);
@@ -657,23 +756,10 @@ function bind(it){
       if(e.shiftKey) it.rot=Math.round(it.rot/15)*15;
       it.rot=((it.rot+180)%360+360)%360-180;
     }
-    else{
-      const h=mode.split(':')[1];
-      const sx=h[1]==='w'?-1:1, sy=h[0]==='n'?-1:1;
-      const r=it.rot*Math.PI/180, cs=Math.cos(r), sn=Math.sin(r);
-      let dW=(dx*cs+dy*sn)*sx, dH=(-dx*sn+dy*cs)*sy;
-      if(it.type==='text'){ it.size=clamp(it.size*(1+dW/Math.max(60,it.w)),8,600); sync(it); refreshVals(); return; }
-      let nw=Math.max(20,it.w+dW), nh=Math.max(20,it.h+dH);
-      if(e.shiftKey) nh=nw/ratio;
-      const aW=nw-it.w, aH=nh-it.h;
-      let cx=it.x+it.w/2, cy=it.y+it.h/2;
-      cx+=(aW/2*sx)*cs-(aH/2*sy)*sn;
-      cy+=(aW/2*sx)*sn+(aH/2*sy)*cs;
-      it.w=nw; it.h=nh; it.x=cx-nw/2; it.y=cy-nh/2;
-    }
+    else resize(it, mode.split(':')[1], tx, ty, st, e.shiftKey);
     sync(it); refreshVals();
   });
-  const stop=e=>{ if(!mode)return; mode=null; clearGuides(); commit();
+  const stop=e=>{ if(!mode||e.pointerId!==pid)return; mode=null; clearGuides(); commit();
     try{el.releasePointerCapture(e.pointerId)}catch(_){}
   };
   el.addEventListener('pointerup',stop); el.addEventListener('pointercancel',stop);
@@ -685,6 +771,42 @@ function bind(it){
   },{passive:false});
   el.addEventListener('dblclick',()=>{ if(it.type==='text') $('tval').focus(); });
 }
+
+/* corners: photos scale (crop kept), shapes free unless Shift; sides: photos crop, shapes stretch one axis */
+function resize(it,h,tx,ty,st,shift){
+  const sx=h.includes('w')?-1:h.includes('e')?1:0, sy=h.includes('n')?-1:h.includes('s')?1:0;
+  const r=it.rot*Math.PI/180, cs=Math.cos(r), sn=Math.sin(r);
+  let dW=(tx*cs+ty*sn)*sx, dH=(-tx*sn+ty*cs)*sy;
+  if(it.type==='text'){ it.size=clamp(st.size*Math.max(.05,(st.w+dW)/st.w),8,600); return; }
+  const side=!sx||!sy, crop=side&&isPic(it), keep=!side&&(isPic(it)||shift), ratio=st.w/st.h;
+  if(keep){ if(Math.abs(dH*ratio)>Math.abs(dW)) dW=dH*ratio; dH=(st.w+dW)/ratio-st.h; }
+  clearGuides();
+  if($('snap').checked&&!it.rot){
+    const T=snapTargets(it), tol=8/view;
+    const bx=sx?nearest(sx>0?st.x+st.w+dW:st.x-dW, T.xs, tol):null;
+    if(bx!==null){ dW=sx>0?bx-st.x-st.w:st.x-bx; if(keep) dH=(st.w+dW)/ratio-st.h; guide(true,bx); }
+    const by=(sy&&!(keep&&bx!==null))?nearest(sy>0?st.y+st.h+dH:st.y-dH, T.ys, tol):null;
+    if(by!==null){ dH=sy>0?by-st.y-st.h:st.y-by; if(keep) dW=(st.h+dH)*ratio-st.w; guide(false,by); }
+  }
+  let vox=0, voy=0;
+  if(crop){   // frame can't grow past the photo's edge
+    const g=st.g;
+    vox=it.flipH?g.dw-st.w-g.ox:g.ox; voy=it.flipV?g.dh-st.h-g.oy:g.oy;
+    if(sx) dW=clamp(dW, 20-st.w, sx>0?g.dw-vox-st.w:vox);
+    if(sy) dH=clamp(dH, 20-st.h, sy>0?g.dh-voy-st.h:voy);
+  }
+  const nw=Math.max(20,st.w+dW), nh=Math.max(20,st.h+dH), aW=nw-st.w, aH=nh-st.h;
+  const cx=st.x+st.w/2+(aW/2*sx)*cs-(aH/2*sy)*sn, cy=st.y+st.h/2+(aW/2*sx)*sn+(aH/2*sy)*cs;
+  it.w=nw; it.h=nh; it.x=cx-nw/2; it.y=cy-nh/2;
+  if(crop){   // keep the photo's size and position fixed; only the frame moves
+    const g=st.g, im=IMG.get(it.src).el, iw=mediaW(im), ih=mediaH(im);
+    it.zoom=g.dw/(iw*Math.max(nw/iw,nh/ih));
+    if(sx<0) vox-=aW; if(sy<0) voy-=aH;
+    const ox=it.flipH?g.dw-nw-vox:vox, oy=it.flipV?g.dh-nh-voy:voy;
+    it.fx=g.dw-nw>.01?clamp(ox/(g.dw-nw),0,1):.5;
+    it.fy=g.dh-nh>.01?clamp(oy/(g.dh-nh),0,1):.5;
+  }
+}
 function centerClient(it){
   const r=canvas.getBoundingClientRect();
   return {x:r.left+(it.x+it.w/2)*view, y:r.top+(it.y+it.h/2)*view};
@@ -695,29 +817,65 @@ let guides=[];
 function clearGuides(){ guides.forEach(g=>g.remove()); guides=[]; }
 function guide(vert,pos){
   const d=document.createElement('div'); d.className='guide';
-  if(vert){ d.style.cssText+=`left:${pos}px;top:0;width:1px;height:${H}px`; }
-  else { d.style.cssText+=`top:${pos}px;left:0;height:1px;width:${W}px`; }
+  if(vert){ d.style.cssText+=`left:${pos}px;top:0;width:calc(1px*var(--k));height:${H}px`; }
+  else { d.style.cssText+=`top:${pos}px;left:0;height:calc(1px*var(--k));width:${W}px`; }
   canvas.appendChild(d); guides.push(d);
+}
+function gapMark(ax,A,B){   // pink bar + px label across the gap between A and B
+  const X=ax==='x', k=1/view;
+  const a0=X?A.x+A.w:A.y+A.h, b0=X?B.x:B.y;
+  const lo=Math.max(X?A.y:A.x, X?B.y:B.x), hi=Math.min(X?A.y+A.h:A.x+A.w, X?B.y+B.h:B.x+B.w), m=(lo+hi)/2;
+  const d=document.createElement('div'); d.className='gap'; d.dataset.v=Math.round(b0-a0);
+  d.style.cssText = X ? `left:${a0}px;top:${m-k}px;width:${b0-a0}px;height:${2*k}px`
+                      : `top:${a0}px;left:${m-k}px;height:${b0-a0}px;width:${2*k}px`;
+  canvas.appendChild(d); guides.push(d);
+}
+function nearest(v,ts,tol){ let b=null, d=tol; for(const t of ts){ const k=Math.abs(v-t); if(k<d){ d=k; b=t; } } return b; }
+function snapTargets(it){
+  const xs=[0,W/3,W/2,W*2/3,W], ys=[0,H/3,H/2,H*2/3,H];
+  const others=items.filter(o=>o!==it&&!o.hidden&&!o.rot);
+  others.forEach(o=>{ xs.push(o.x,o.x+o.w/2,o.x+o.w); ys.push(o.y,o.y+o.h/2,o.y+o.h); });
+  return {xs,ys,others};
+}
+/* equal-spacing candidates: match an existing gap next to a neighbour, or centre between two neighbours */
+function spacing(it,others,ax){
+  const [p,s,q,t] = ax==='x' ? ['x','w','y','h'] : ['y','h','x','w'];
+  const lap=(a,b)=>a[q]<b[q]+b[t] && b[q]<a[q]+a[t];
+  const row=others.filter(o=>lap(o,it)), out=[], gaps=[];
+  others.forEach(a=>{
+    let nb=null;
+    others.forEach(b=>{ if(b!==a&&lap(a,b)&&b[p]>=a[p]+a[s]-.5&&(!nb||b[p]<nb[p])) nb=b; });
+    if(nb&&nb[p]-(a[p]+a[s])>=1) gaps.push({g:nb[p]-(a[p]+a[s]),a,b:nb});
+  });
+  row.forEach(n=>gaps.forEach(G=>{
+    out.push({pos:n[p]+n[s]+G.g, marks:[[n,it],[G.a,G.b]]});
+    out.push({pos:n[p]-G.g-it[s], marks:[[it,n],[G.a,G.b]]});
+  }));
+  row.forEach(L=>row.forEach(R=>{
+    const room=R[p]-(L[p]+L[s])-it[s];
+    if(L!==R&&room>=2) out.push({pos:L[p]+L[s]+room/2, marks:[[L,it],[it,R]]});
+  }));
+  return out;
+}
+function snapAxis(it,ax,ts,others,tol){
+  const s=ax==='x'?'w':'h', offs=[0,it[s]/2,it[s]];
+  let best=null, bd=tol;
+  for(const o of offs) for(const t of ts){ const d=Math.abs(it[ax]+o-t); if(d<bd){ bd=d; best={pos:t-o}; } }
+  for(const c of spacing(it,others,ax)){ const d=Math.abs(it[ax]-c.pos); if(d<bd){ bd=d; best=c; } }
+  if(!best) return;
+  it[ax]=best.pos;
+  for(const t of new Set(ts)) if(offs.some(o=>Math.abs(it[ax]+o-t)<.5)) guide(ax==='x',t);
+  if(best.marks) best.marks.forEach(m=>gapMark(ax,m[0],m[1]));
 }
 function snapMove(it){
   clearGuides();
   if(!$('snap').checked || it.rot) return;
-  const tol=8/view;
-  const xs=[0,W/2,W], ys=[0,H/2,H];
-  items.forEach(o=>{ if(o!==it&&!o.hidden){ xs.push(o.x,o.x+o.w/2,o.x+o.w); ys.push(o.y,o.y+o.h/2,o.y+o.h); }});
-  const mine=[[it.x,0],[it.x+it.w/2,it.w/2],[it.x+it.w,it.w]];
-  for(const [v,off] of mine){
-    for(const t of xs) if(Math.abs(v-t)<tol){ it.x=t-off; guide(true,t); return snapY(it,ys,tol); }
-  }
-  snapY(it,ys,tol);
-}
-function snapY(it,ys,tol){
-  const mine=[[it.y,0],[it.y+it.h/2,it.h/2],[it.y+it.h,it.h]];
-  for(const [v,off] of mine)
-    for(const t of ys) if(Math.abs(v-t)<tol){ it.y=t-off; guide(false,t); return; }
+  const T=snapTargets(it), tol=8/view;
+  snapAxis(it,'x',T.xs,T.others,tol);
+  snapAxis(it,'y',T.ys,T.others,tol);
 }
 
-canvas.addEventListener('pointerdown',e=>{ if(e.target===canvas||e.target===bgfill||e.target===$('empty')) select(null); });
+canvas.addEventListener('pointerdown',e=>{ if(touches.size>1) return; if(e.target===canvas||e.target===bgfill||e.target===$('empty')) select(null); });
 
 /* ─── inspector ─── */
 const bindRange=(id,prop,fn,label)=>{
@@ -790,7 +948,7 @@ function refreshVals(){
 /* ─── item actions ─── */
 $('dup').onclick=()=>{
   if(!sel)return say("Nothing selected.");
-  const c={...sel, id:uid(), x:sel.x+30, y:sel.y+30}; delete c.el; delete c.inner; delete c.vid;
+  const c={...sel, id:uid(), x:sel.x+30, y:sel.y+30}; delete c.el; delete c.inner; delete c.vid; delete c.ghost;
   items.push(c); mount(c); select(c); refresh(); commit();
 };
 $('front').onclick=()=>{ if(!sel)return; items=items.filter(i=>i!==sel).concat(sel); syncAll(); drawLayers(); commit(); };
@@ -896,7 +1054,7 @@ function refresh(){
   const parts=[];
   if(n) parts.push(`${n} photo${n>1?'s':''}`);
   if(v) parts.push(`${v} video${v>1?'s':''}`);
-  $('count').textContent=parts.length?parts.join(' + ')+' on the canvas.':'Drop image or video files anywhere too.';
+  $('count').textContent=parts.length?parts.join(' + ')+' on the canvas.':'Drop images, videos or fonts anywhere too.';
   $('saveVid').disabled=!v;
   drawLayers();
 }
@@ -1033,7 +1191,7 @@ $('save').onclick=()=>{
 $('saveProj').onclick=()=>{
   const used={}; items.forEach(i=>{ if(i.type==='photo'&&IMG.has(i.src)) used[i.src]=IMG.get(i.src).src; });
   const vCount=items.filter(i=>i.type==='video').length;
-  const data=JSON.parse(snap()); data.images=used; data.version=1;
+  const data=JSON.parse(snap()); data.images=used; data.fonts=Object.fromEntries(FONTS); data.version=1;
   const b=new Blob([JSON.stringify(data)],{type:'application/json'});
   const a=document.createElement('a');
   a.href=URL.createObjectURL(b);
@@ -1056,11 +1214,13 @@ function loadProject(f){
       items=d.items.filter(o=>!isPic(o)||IMG.has(o.src)).map(o=>({...defaults(o.type),...o}));
       items.forEach(mount); select(null); refresh(); commit(); say("Project opened.");
     };
-    if(!left) return done();
-    entries.forEach(([id,src])=>{
-      const im=new Image();
-      im.onload=im.onerror=()=>{ IMG.set(id,{src,el:im}); if(--left===0) done(); };
-      im.src=src;
+    Promise.all(Object.entries(d.fonts||{}).map(([fam,b])=>addFont(fam,unb64(b),b).catch(()=>{}))).then(()=>{
+      if(!left) return done();
+      entries.forEach(([id,src])=>{
+        const im=new Image();
+        im.onload=im.onerror=()=>{ IMG.set(id,{src,el:im}); if(--left===0) done(); };
+        im.src=src;
+      });
     });
   };
   r.readAsText(f);
