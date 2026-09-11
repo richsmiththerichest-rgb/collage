@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Text Message Generator — offline</title>
+<style id="appcss">
+:root{
+  --ink:#0d0f12; --panel:#14171c; --panel2:#1b1f26; --line:#282e37;
+  --fg:#e7ebf0; --dim:#8b95a5; --accent:#ffd166; --accent2:#4ea3ff;
+  --radius:10px;
+  --ui:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ink);color:var(--fg);font-family:var(--ui);font-size:13px}
+.app{display:grid;grid-template-columns:360px 1fr;min-height:100vh}
+.side{background:var(--panel);border-right:1px solid var(--line);padding:16px;overflow-y:auto;max-height:100vh}
+.stage{display:flex;flex-direction:column;align-items:center;gap:14px;padding:24px}
+.brand{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);margin:0 0 14px}
+.grp{border:1px solid var(--line);border-radius:var(--radius);padding:12px;margin-bottom:12px;background:var(--panel2)}
+.grp>.gt{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin-bottom:10px}
+label.f{display:block;margin-bottom:9px}
+label.f span{display:block;color:var(--dim);margin-bottom:4px;font-size:11px}
+input[type=text],input[type=time],select,textarea{width:100%;background:#0f1216;color:var(--fg);border:1px solid var(--line);border-radius:7px;padding:7px 8px;font:inherit}
+textarea{resize:vertical;min-height:46px}
+select{appearance:none}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--accent2);outline-offset:0;border-color:transparent}
+button{font:inherit;color:var(--fg);background:#242a33;border:1px solid var(--line);border-radius:7px;padding:6px 10px;cursor:pointer}
+button:hover{background:#2e3541}
+button:focus-visible{outline:2px solid var(--accent2)}
+.btn-a{background:var(--accent);color:#1a1400;border-color:var(--accent);font-weight:600}
+.btn-a:hover{background:#ffdd8a}
+.row{display:flex;gap:6px;flex-wrap:wrap}
+.seg{display:flex;border:1px solid var(--line);border-radius:7px;overflow:hidden}
+.seg button{border:0;border-radius:0;flex:1;background:#0f1216}
+.seg button[aria-pressed=true]{background:var(--accent2);color:#001426;font-weight:600}
+.msg{border:1px solid var(--line);border-radius:8px;padding:9px;margin-bottom:8px;background:#0f1216}
+.msg .hd{display:flex;gap:6px;align-items:center;margin-bottom:7px}
+.msg .hd select{flex:1}
+.icon{padding:5px 8px;line-height:1}
+.mini{color:var(--dim);font-size:11px;line-height:1.5}
+.thumb{width:34px;height:34px;border-radius:50%;object-fit:cover;border:1px solid var(--line)}
+.pchip{display:flex;gap:6px;align-items:center;margin-bottom:6px}
+.pchip input{flex:1}
+
+/* ---------- phone ---------- */
+.viewport{max-height:calc(100vh - 110px);overflow:auto;border-radius:34px;box-shadow:0 30px 70px rgba(0,0,0,.55)}
+.phone{width:390px;font-family:var(--ui);
+  --chat-bg:#fff; --in-bg:#e9e9eb; --in-fg:#000; --out-bg:#1e8bff; --out-fg:#fff;
+  --meta:#8e8e93; --hbg:#f7f7f7; --hline:#d1d1d6; --hfg:#000; --tint:#1e8bff;
+  background:var(--chat-bg);color:var(--hfg)}
+.phone.dark{--chat-bg:#000;--in-bg:#26262a;--in-fg:#fff;--out-bg:#1e8bff;--out-fg:#fff;
+  --meta:#8d8d93;--hbg:#1c1c1e;--hline:#38383a;--hfg:#fff}
+.sbar{display:flex;justify-content:space-between;align-items:center;padding:12px 26px 4px;font-size:15px;font-weight:600;background:var(--hbg);color:var(--hfg)}
+.sicons{display:flex;gap:5px;align-items:center}
+.head{background:var(--hbg);border-bottom:1px solid var(--hline);padding:2px 12px 8px;display:flex;flex-direction:column;align-items:center;position:relative}
+.back{position:absolute;left:12px;top:14px;color:var(--tint);font-size:22px;line-height:1}
+.av{width:50px;height:50px;border-radius:50%;object-fit:cover;background:#b9b9be;color:#fff;display:flex;align-items:center;justify-content:center;font-size:21px;font-weight:500}
+.avstack{display:flex}
+.avstack .av{width:38px;height:38px;font-size:16px;border:2px solid var(--hbg);margin-left:-12px}
+.avstack .av:first-child{margin-left:0}
+.hname{margin-top:3px;font-size:12px;color:var(--hfg);display:flex;align-items:center;gap:3px}
+.hname i{color:var(--meta);font-style:normal;font-size:10px}
+.thread{padding:10px 12px 16px;display:flex;flex-direction:column;background:var(--chat-bg)}
+.divider{text-align:center;color:var(--meta);font-size:11px;margin:14px 0 8px}
+.divider b{color:var(--meta);font-weight:600}
+.sender{font-size:11px;color:var(--meta);margin:6px 0 2px 44px}
+.line{display:flex;align-items:flex-end;gap:6px;margin-top:2px}
+.line.out{justify-content:flex-end}
+.line.gap{margin-top:10px}
+.line .av{width:28px;height:28px;font-size:12px;flex:none}
+.spacer{width:28px;flex:none}
+.b{position:relative;max-width:250px;padding:8px 13px;border-radius:19px;font-size:16px;line-height:1.3;word-wrap:break-word;white-space:pre-wrap}
+.b.in{background:var(--in-bg);color:var(--in-fg)}
+.b.out{background:var(--out-bg);color:var(--out-fg)}
+.b.pic{padding:0;background:none;overflow:visible}
+.b.pic img{display:block;max-width:230px;border-radius:19px}
+.b.tail.in::before{content:"";position:absolute;left:-6px;bottom:0;width:13px;height:18px;background:var(--in-bg);border-bottom-right-radius:15px}
+.b.tail.in::after{content:"";position:absolute;left:-12px;bottom:0;width:12px;height:18px;background:var(--chat-bg);border-bottom-right-radius:12px}
+.b.tail.out::before{content:"";position:absolute;right:-6px;bottom:0;width:13px;height:18px;background:var(--out-bg);border-bottom-left-radius:15px}
+.b.tail.out::after{content:"";position:absolute;right:-12px;bottom:0;width:12px;height:18px;background:var(--chat-bg);border-bottom-left-radius:12px}
+.b.pic.tail::before,.b.pic.tail::after{display:none}
+.tap{position:absolute;top:-13px;background:var(--in-bg);border:2px solid var(--chat-bg);border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:13px}
+.b.in .tap{right:-10px}
+.b.out .tap{left:-10px;background:var(--in-bg)}
+.receipt{align-self:flex-end;font-size:11px;color:var(--meta);margin:3px 2px 0}
+.receipt b{font-weight:600;color:var(--meta)}
+.wm{text-align:center;font-size:10px;color:var(--meta);padding:0 0 10px;background:var(--chat-bg)}
+.tray{background:var(--hbg);border-top:1px solid var(--hline);padding:8px 12px 14px;display:flex;align-items:center;gap:8px}
+.field{flex:1;border:1px solid var(--hline);border-radius:16px;padding:5px 12px;color:var(--meta);font-size:15px;background:var(--chat-bg)}
+.plus{width:28px;height:28px;border-radius:50%;background:var(--in-bg);color:var(--meta);display:flex;align-items:center;justify-content:center;font-size:18px}
+@media (max-width:900px){
+  .app{grid-template-columns:1fr}
+  .side{max-height:none;overflow:visible;border-right:0;border-top:1px solid var(--line);
+        padding:16px 16px calc(24px + env(safe-area-inset-bottom))}
+  .stage{order:-1;padding:10px 0 14px}
+  .viewport{max-height:none;overflow:visible;width:100%;border-radius:0;box-shadow:none}
+  .phone{width:100%;max-width:390px;margin:0 auto}
+  /* 16px stops iOS Safari auto-zooming on focus */
+  input[type=text],input[type=time],select,textarea{font-size:16px;padding:10px}
+  button{min-height:44px;padding:8px 12px}
+  .icon{min-width:44px;padding:8px}
+  .b{max-width:72%}
+}
+
+/* ---------- screenshot mode ---------- */
+body.shot .side{display:none}
+body.shot .stage{padding:0}
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:30;
+  background:#242a33;color:var(--fg);border:1px solid var(--line);border-radius:20px;
+  padding:9px 16px;font-family:var(--ui);font-size:13px;display:none}
+body.shot #toast.on{display:block}
+
+/* ---------- export result ---------- */
+#out{position:fixed;inset:0;z-index:40;background:rgba(0,0,0,.9);display:none;
+  flex-direction:column;align-items:center;gap:12px;padding:20px;overflow:auto}
+#out.on{display:flex}
+#out img{max-width:100%;max-height:70vh;border-radius:8px}
+#out p{color:var(--dim);font-family:var(--ui);font-size:13px;text-align:center;margin:0}
+
+@media (prefers-reduced-motion:no-preference){button{transition:background .12s ease}}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <p class="brand">Text message generator</p>
+
+    <div class="grp">
+      <div class="gt">Conversation</div>
+      <label class="f"><span>Chat type</span>
+        <div class="seg" id="typeSeg">
+          <button data-v="single" aria-pressed="true">Direct</button>
+          <button data-v="group" aria-pressed="false">Group</button>
+        </div>
+      </label>
+      <label class="f"><span>Chat name</span><input type="text" id="chatName" value="Alex"></label>
+      <div id="avRow">
+        <span class="mini">Avatar</span>
+        <div class="row" style="align-items:center;margin:5px 0 9px">
+          <img class="thumb" id="avPrev" alt="" style="display:none">
+          <button id="avPick">Upload image</button>
+          <button id="avClear">Clear</button>
+        </div>
+      </div>
+      <div id="people" style="display:none">
+        <span class="mini">People in the chat</span>
+        <div id="pList" style="margin:6px 0"></div>
+        <button id="addP">Add person</button>
+      </div>
+    </div>
+
+    <div class="grp">
+      <div class="gt">Appearance</div>
+      <label class="f"><span>Mode</span>
+        <div class="seg" id="modeSeg">
+          <button data-v="light" aria-pressed="true">Light</button>
+          <button data-v="dark" aria-pressed="false">Dark</button>
+        </div>
+      </label>
+      <label class="f"><span>Status bar time</span><input type="text" id="devTime" value="9:41"></label>
+      <label class="f"><span>Status on last sent message</span>
+        <select id="receipt">
+          <option value="">None</option>
+          <option value="Delivered">Delivered</option>
+          <option value="Read">Read</option>
+        </select>
+      </label>
+      <label class="f" id="receiptTimeWrap" style="display:none"><span>Read time</span><input type="text" id="receiptTime" value="10:59 PM"></label>
+      <label class="f"><span>Footer note (leave empty to hide)</span><input type="text" id="watermark" value=""></label>
+    </div>
+
+    <div class="grp">
+      <div class="gt">Messages</div>
+      <div id="list"></div>
+      <div class="row" style="margin-top:8px">
+        <button id="addIn">Add received</button>
+        <button id="addOut">Add sent</button>
+        <button id="addDiv">Add time divider</button>
+      </div>
+    </div>
+
+    <div class="row">
+      <button class="btn-a" id="dl" style="flex:1">Save PNG</button>
+      <button id="shot">Screenshot mode</button>
+    </div>
+    <p class="mini" style="margin-top:10px">Everything runs in this file. No network, no uploads — images you add stay in the page.</p>
+  </aside>
+
+  <main class="stage">
+    <div class="viewport"><div class="phone" id="phone"></div></div>
+  </main>
+</div>
+
+<input type="file" id="filein" accept="image/*" style="display:none">
+
+<div id="out">
+  <img id="outimg" alt="">
+  <p id="outnote">Press and hold the image, then choose Save to Photos.</p>
+  <button id="outclose">Close</button>
+</div>
+<div id="toast">Tap anywhere to exit</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const uid = () => Math.random().toString(36).slice(2,9);
+
+const REACTIONS = {"":"None","❤️":"Heart","👍":"Thumbs up","👎":"Thumbs down","😂":"Haha","‼️":"Emphasis","❓":"Question"};
+
+const state = {
+  type:"single", mode:"light", chatName:"Alex", avatar:null,
+  devTime:"9:41", receipt:"", receiptTime:"10:59 PM", watermark:"",
+  people:[{id:"p1",name:"Alex",avatar:null},{id:"p2",name:"Sam",avatar:null}],
+  items:[
+    {id:uid(),kind:"divider",text:"Today 10:58 PM"},
+    {id:uid(),kind:"msg",from:"p1",text:"Did you see that viral video of the cat playing piano? 😂",img:null,tap:""},
+    {id:uid(),kind:"msg",from:"me",text:"OMG yes! A million views in a day 🎹🐱",img:null,tap:"❤️"}
+  ]
+};
+
+/* ---------- file picker ---------- */
+let pickTarget = null;
+$("#filein").addEventListener("change", e => {
+  const f = e.target.files[0]; if(!f || !pickTarget) return;
+  const r = new FileReader();
+  r.onload = () => { pickTarget(r.result); pickTarget=null; render(); };
+  r.readAsDataURL(f);
+  e.target.value = "";
+});
+const pickImage = cb => { pickTarget = cb; $("#filein").click(); };
+
+/* ---------- controls ---------- */
+function seg(el, key, after){
+  el.addEventListener("click", e => {
+    const b = e.target.closest("button"); if(!b) return;
+    state[key] = b.dataset.v;
+    [...el.children].forEach(c => c.setAttribute("aria-pressed", c===b));
+    if(after) after();
+    render();
+  });
+}
+seg($("#typeSeg"), "type", () => {
+  $("#people").style.display = state.type==="group" ? "" : "none";
+  $("#avRow").style.display  = state.type==="group" ? "none" : "";
+  drawList();
+});
+seg($("#modeSeg"), "mode");
+
+const bind = (sel, key, extra) => $(sel).addEventListener("input", e => { state[key]=e.target.value; if(extra) extra(); render(); });
+bind("#chatName","chatName"); bind("#devTime","devTime");
+bind("#receiptTime","receiptTime"); bind("#watermark","watermark");
+bind("#receipt","receipt", () => { $("#receiptTimeWrap").style.display = state.receipt==="Read" ? "" : "none"; });
+
+$("#avPick").onclick = () => pickImage(d => state.avatar = d);
+$("#avClear").onclick = () => { state.avatar=null; render(); };
+
+$("#addP").onclick = () => { state.people.push({id:uid(),name:"New person",avatar:null}); drawPeople(); drawList(); render(); };
+$("#addIn").onclick  = () => { state.items.push({id:uid(),kind:"msg",from:state.people[0].id,text:"New message",img:null,tap:""}); drawList(); render(); };
+$("#addOut").onclick = () => { state.items.push({id:uid(),kind:"msg",from:"me",text:"New message",img:null,tap:""}); drawList(); render(); };
+$("#addDiv").onclick = () => { state.items.push({id:uid(),kind:"divider",text:"Today 11:04 PM"}); drawList(); render(); };
+
+/* ---------- people editor ---------- */
+function drawPeople(){
+  const box = $("#pList"); box.innerHTML = "";
+  state.people.forEach((p,i) => {
+    const row = document.createElement("div"); row.className = "pchip";
+    const inp = document.createElement("input"); inp.type="text"; inp.value=p.name;
+    inp.oninput = e => { p.name = e.target.value; drawList(); render(); };
+    const up = document.createElement("button"); up.className="icon"; up.textContent="🖼"; up.title="Set avatar";
+    up.onclick = () => pickImage(d => p.avatar = d);
+    const del = document.createElement("button"); del.className="icon"; del.textContent="✕"; del.title="Remove";
+    del.onclick = () => {
+      if(state.people.length<2) return;
+      state.people.splice(i,1);
+      state.items = state.items.filter(m => m.kind!=="msg" || m.from==="me" || state.people.some(q=>q.id===m.from));
+      drawPeople(); drawList(); render();
+    };
+    row.append(inp,up,del); box.append(row);
+  });
+}
+
+/* ---------- message editor ---------- */
+function drawList(){
+  const box = $("#list"); box.innerHTML = "";
+  state.items.forEach((it,i) => {
+    const card = document.createElement("div"); card.className = "msg";
+    const hd = document.createElement("div"); hd.className = "hd";
+
+    if(it.kind==="msg"){
+      const sel = document.createElement("select");
+      const opts = [["me","You (sent)"]].concat(
+        state.type==="group" ? state.people.map(p=>[p.id,p.name]) : [[state.people[0].id, state.chatName||"Them"]]
+      );
+      opts.forEach(([v,l]) => { const o=document.createElement("option"); o.value=v; o.textContent=l; sel.append(o); });
+      sel.value = opts.some(o=>o[0]===it.from) ? it.from : opts[1][0];
+      it.from = sel.value;
+      sel.onchange = e => { it.from = e.target.value; render(); };
+      hd.append(sel);
+    } else {
+      const tag = document.createElement("div"); tag.className="mini"; tag.style.flex="1"; tag.textContent="Time divider";
+      hd.append(tag);
+    }
+
+    const mk = (txt,title,fn) => { const b=document.createElement("button"); b.className="icon"; b.textContent=txt; b.title=title; b.onclick=fn; return b; };
+    hd.append(
+      mk("↑","Move up",()=>{ if(i>0){ state.items.splice(i-1,0,state.items.splice(i,1)[0]); drawList(); render(); }}),
+      mk("↓","Move down",()=>{ if(i<state.items.length-1){ state.items.splice(i+1,0,state.items.splice(i,1)[0]); drawList(); render(); }}),
+      mk("✕","Delete",()=>{ state.items.splice(i,1); drawList(); render(); })
+    );
+    card.append(hd);
+
+    const ta = document.createElement(it.kind==="msg" ? "textarea" : "input");
+    if(it.kind!=="msg") ta.type = "text";
+    ta.value = it.text;
+    ta.oninput = e => { it.text = e.target.value; render(); };
+    card.append(ta);
+
+    if(it.kind==="msg"){
+      const row = document.createElement("div"); row.className="row"; row.style.marginTop="7px";
+      const tap = document.createElement("select"); tap.style.flex="1";
+      Object.entries(REACTIONS).forEach(([v,l]) => { const o=document.createElement("option"); o.value=v; o.textContent=v?`${v} ${l}`:l; tap.append(o); });
+      tap.value = it.tap;
+      tap.onchange = e => { it.tap = e.target.value; render(); };
+      const img = document.createElement("button"); img.textContent = it.img ? "Change image" : "Add image";
+      img.onclick = () => pickImage(d => { it.img = d; drawList(); });
+      row.append(tap, img);
+      if(it.img){
+        const rm = document.createElement("button"); rm.textContent="Remove image";
+        rm.onclick = () => { it.img=null; drawList(); render(); };
+        row.append(rm);
+      }
+      card.append(row);
+    }
+    box.append(card);
+  });
+}
+
+/* ---------- preview ---------- */
+const esc = s => s.replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+const initial = n => (n||"?").trim().charAt(0).toUpperCase();
+const person = id => state.people.find(p=>p.id===id);
+
+function avatarHTML(src, name, cls=""){
+  return src ? `<img class="av ${cls}" src="${src}" alt="">`
+             : `<div class="av ${cls}">${esc(initial(name))}</div>`;
+}
+
+function render(){
+  const ph = $("#phone");
+  ph.className = "phone" + (state.mode==="dark" ? " dark" : "");
+
+  const title = state.type==="group"
+    ? (state.chatName || state.people.map(p=>p.name).join(", "))
+    : state.chatName;
+
+  const headAv = state.type==="group"
+    ? `<div class="avstack">${state.people.slice(0,3).map(p=>avatarHTML(p.avatar,p.name)).join("")}</div>`
+    : avatarHTML(state.avatar, state.chatName);
+
+  const msgs = state.items;
+  let body = "";
+  msgs.forEach((it,i) => {
+    if(it.kind==="divider"){ body += `<div class="divider">${esc(it.text)}</div>`; return; }
+    const out = it.from === "me";
+    const prev = msgs[i-1], next = msgs[i+1];
+    const sameAsPrev = prev && prev.kind==="msg" && prev.from===it.from;
+    const last = !(next && next.kind==="msg" && next.from===it.from);
+    const p = out ? null : person(it.from);
+
+    if(!out && state.type==="group" && !sameAsPrev)
+      body += `<div class="sender">${esc(p ? p.name : "")}</div>`;
+
+    const tap = it.tap ? `<span class="tap">${it.tap}</span>` : "";
+    const inner = it.img
+      ? `<img src="${it.img}" alt="">${tap}`
+      : `${esc(it.text)}${tap}`;
+    const bcls = ["b", out?"out":"in", last?"tail":"", it.img?"pic":""].filter(Boolean).join(" ");
+    const bubble = `<div class="${bcls}">${inner}</div>`;
+
+    const avSlot = out ? "" :
+      (state.type==="group"
+        ? (last ? avatarHTML(p&&p.avatar, p&&p.name) : `<div class="spacer"></div>`)
+        : "");
+
+    body += `<div class="line ${out?"out":"in"} ${sameAsPrev?"":"gap"}">${avSlot}${bubble}</div>`;
+  });
+
+  const lastOut = [...msgs].reverse().find(m => m.kind==="msg" && m.from==="me");
+  if(state.receipt && lastOut){
+    const txt = state.receipt==="Read" ? `Read <b>${esc(state.receiptTime)}</b>` : `<b>Delivered</b>`;
+    body += `<div class="receipt">${txt}</div>`;
+  }
+
+  ph.innerHTML = `
+    <div class="sbar"><span>${esc(state.devTime)}</span>
+      <span class="sicons">${signal()}${wifi()}${battery()}</span></div>
+    <div class="head">
+      <div class="back">‹</div>
+      ${headAv}
+      <div class="hname">${esc(title)} <i>›</i></div>
+    </div>
+    <div class="thread">${body}</div>
+    ${state.watermark ? `<div class="wm">${esc(state.watermark)}</div>` : ""}
+    <div class="tray"><div class="plus">+</div><div class="field">iMessage</div></div>`;
+}
+
+function signal(){return `<svg width="18" height="12" viewBox="0 0 18 12"><g fill="currentColor">
+<rect x="0" y="7" width="3" height="5" rx="1"/><rect x="4.5" y="5" width="3" height="7" rx="1"/>
+<rect x="9" y="3" width="3" height="9" rx="1"/><rect x="13.5" y="0" width="3" height="12" rx="1"/></g></svg>`;}
+function wifi(){return `<svg width="17" height="12" viewBox="0 0 17 12"><g fill="currentColor">
+<path d="M8.5 1C5.4 1 2.7 2.2.6 4.2l1.5 1.5C3.8 4 6 3 8.5 3S13.2 4 14.9 5.7l1.5-1.5C14.3 2.2 11.6 1 8.5 1z"/>
+<path d="M8.5 5.4c-1.8 0-3.4.7-4.6 1.9l1.5 1.5c.8-.8 1.9-1.3 3.1-1.3s2.3.5 3.1 1.3l1.5-1.5c-1.2-1.2-2.8-1.9-4.6-1.9z"/>
+<circle cx="8.5" cy="10.3" r="1.7"/></g></svg>`;}
+function battery(){return `<svg width="26" height="12" viewBox="0 0 26 12">
+<rect x="0.5" y="0.5" width="21" height="11" rx="3.2" fill="none" stroke="currentColor" opacity=".4"/>
+<rect x="2.5" y="2.5" width="17" height="7" rx="1.8" fill="currentColor"/>
+<path d="M23.5 4.2v3.6c1-.3 1.3-.9 1.3-1.8s-.3-1.5-1.3-1.8z" fill="currentColor" opacity=".4"/></svg>`;}
+
+/* ---------- export ---------- */
+$("#dl").onclick = async () => {
+  const btn = $("#dl"), node = $("#phone");
+  btn.disabled = true; btn.textContent = "Rendering…";
+  try{
+    const w = node.offsetWidth, h = node.offsetHeight, scale = 3;
+    const clone = node.cloneNode(true);
+    clone.setAttribute("xmlns","http://www.w3.org/1999/xhtml");
+    clone.style.width = w + "px";
+    const svg =
+      `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}">` +
+      `<foreignObject width="100%" height="100%">` +
+      `<style>${$("#appcss").textContent}</style>` +
+      new XMLSerializer().serializeToString(clone) +
+      `</foreignObject></svg>`;
+    const src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
+    // Safari often renders foreignObject blank on the first decode; a second pass fixes it
+    let img = new Image(); img.src = src; await img.decode();
+    img = new Image(); img.src = src; await img.decode();
+    const c = document.createElement("canvas");
+    c.width = w*scale; c.height = h*scale;
+    const ctx = c.getContext("2d");
+    ctx.fillStyle = state.mode==="dark" ? "#000" : "#fff";
+    ctx.fillRect(0,0,c.width,c.height);
+    ctx.drawImage(img,0,0,c.width,c.height);
+    const blob = await new Promise(r => c.toBlob(r, "image/png"));
+    const touch = matchMedia("(pointer:coarse)").matches;
+    const file = new File([blob], "text-message.png", {type:"image/png"});
+
+    if(touch && navigator.canShare && navigator.canShare({files:[file]})){
+      try{ await navigator.share({files:[file]}); }
+      catch(e){ if(e.name !== "AbortError") showOut(blob); }
+    } else if(touch){
+      showOut(blob);
+    } else {
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "text-message.png";
+      a.click();
+    }
+    btn.textContent = "Save PNG";
+  }catch(err){
+    console.error(err);
+    btn.textContent = "Failed — use Screenshot mode";
+    setTimeout(()=>btn.textContent="Save PNG", 3000);
+  }
+  btn.disabled = false;
+};
+
+function showOut(blob){
+  $("#outimg").src = URL.createObjectURL(blob);
+  $("#out").classList.add("on");
+}
+$("#outclose").onclick = () => $("#out").classList.remove("on");
+
+/* ---------- screenshot mode ---------- */
+$("#shot").onclick = () => {
+  document.body.classList.add("shot");
+  scrollTo(0,0);
+  const t = $("#toast"); t.classList.add("on");
+  setTimeout(()=>t.classList.remove("on"), 1800);
+  setTimeout(()=>addEventListener("click", exitShot, {once:true}), 300);
+};
+function exitShot(){ document.body.classList.remove("shot"); $("#toast").classList.remove("on"); }
+
+drawPeople(); drawList(); render();
+</script>
+</body>
+</html>
