@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Text Message Generator — offline</title>
+<style id="appcss">
+:root{
+  --ink:#0d0f12; --panel:#14171c; --panel2:#1b1f26; --line:#282e37;
+  --fg:#e7ebf0; --dim:#8b95a5; --accent:#ffd166; --accent2:#4ea3ff;
+  --radius:10px;
+  --ui:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ink);color:var(--fg);font-family:var(--ui);font-size:13px}
+.app{display:grid;grid-template-columns:360px 1fr;min-height:100vh}
+.side{background:var(--panel);border-right:1px solid var(--line);padding:16px;overflow-y:auto;max-height:100vh}
+.stage{display:flex;flex-direction:column;align-items:center;gap:14px;padding:24px}
+.brand{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);margin:0 0 14px}
+.grp{border:1px solid var(--line);border-radius:var(--radius);padding:12px;margin-bottom:12px;background:var(--panel2)}
+.grp>.gt{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin-bottom:10px}
+label.f{display:block;margin-bottom:9px}
+label.f span{display:block;color:var(--dim);margin-bottom:4px;font-size:11px}
+input[type=text],input[type=time],select,textarea{width:100%;background:#0f1216;color:var(--fg);border:1px solid var(--line);border-radius:7px;padding:7px 8px;font:inherit}
+textarea{resize:vertical;min-height:46px}
+select{appearance:none}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--accent2);outline-offset:0;border-color:transparent}
+button{font:inherit;color:var(--fg);background:#242a33;border:1px solid var(--line);border-radius:7px;padding:6px 10px;cursor:pointer}
+button:hover{background:#2e3541}
+button:focus-visible{outline:2px solid var(--accent2)}
+.btn-a{background:var(--accent);color:#1a1400;border-color:var(--accent);font-weight:600}
+.btn-a:hover{background:#ffdd8a}
+.row{display:flex;gap:6px;flex-wrap:wrap}
+.seg{display:flex;border:1px solid var(--line);border-radius:7px;overflow:hidden}
+.seg button{border:0;border-radius:0;flex:1;background:#0f1216}
+.seg button[aria-pressed=true]{background:var(--accent2);color:#001426;font-weight:600}
+.msg{border:1px solid var(--line);border-radius:8px;padding:9px;margin-bottom:8px;background:#0f1216}
+.msg.drop{outline:2px dashed var(--accent2);outline-offset:2px}
+.msg .hd{display:flex;gap:6px;align-items:center;margin-bottom:7px}
+.msg .hd select{flex:1}
+.icon{padding:5px 8px;line-height:1}
+.mini{color:var(--dim);font-size:11px;line-height:1.5}
+.thumb{width:34px;height:34px;border-radius:50%;object-fit:cover;border:1px solid var(--line)}
+.pchip{display:flex;gap:6px;align-items:center;margin-bottom:6px}
+.pchip input{flex:1}
+.withbtn{display:flex;gap:6px}
+.withbtn input{flex:1;min-width:0}
+
+/* ---------- phone ---------- */
+.viewport{max-height:calc(100vh - 110px);overflow:auto;border-radius:34px;box-shadow:0 30px 70px rgba(0,0,0,.55)}
+.phone{width:390px;font-family:var(--ui);
+  --chat-bg:#fff; --in-bg:#e9e9eb; --in-fg:#000; --out-bg:#1e8bff; --out-fg:#fff;
+  --meta:#8e8e93; --hbg:#f7f7f7; --hline:#d1d1d6; --hfg:#000; --tint:#1e8bff;
+  background:var(--chat-bg);color:var(--hfg)}
+.phone.dark{--chat-bg:#000;--in-bg:#26262a;--in-fg:#fff;--out-bg:#1e8bff;--out-fg:#fff;
+  --meta:#8d8d93;--hbg:#1c1c1e;--hline:#38383a;--hfg:#fff}
+.sbar{display:flex;justify-content:space-between;align-items:center;padding:12px 26px 4px;font-size:15px;font-weight:600;background:var(--hbg);color:var(--hfg)}
+.sicons{display:flex;gap:5px;align-items:center}
+.head{background:var(--hbg);border-bottom:1px solid var(--hline);padding:2px 12px 8px;display:flex;flex-direction:column;align-items:center;position:relative}
+.back{position:absolute;left:12px;top:14px;color:var(--tint);font-size:22px;line-height:1}
+.av{width:50px;height:50px;border-radius:50%;object-fit:cover;background:#b9b9be;color:#fff;display:flex;align-items:center;justify-content:center;font-size:21px;font-weight:500}
+.avstack{display:flex}
+.avstack .av{width:38px;height:38px;font-size:16px;border:2px solid var(--hbg);margin-left:-12px}
+.avstack .av:first-child{margin-left:0}
+.hname{margin-top:3px;font-size:12px;color:var(--hfg);display:flex;align-items:center;gap:3px}
+.hname i{color:var(--meta);font-style:normal;font-size:10px}
+.thread{padding:10px 12px 16px;display:flex;flex-direction:column;background:var(--chat-bg)}
+.divider{text-align:center;color:var(--meta);font-size:11px;margin:14px 0 8px}
+.divider b{color:var(--meta);font-weight:600}
+.sender{font-size:11px;color:var(--meta);margin:6px 0 2px 44px}
+.line{display:flex;align-items:flex-end;gap:6px;margin-top:2px}
+.line.out{justify-content:flex-end}
+.line.gap{margin-top:10px}
+.line .av{width:28px;height:28px;font-size:12px;flex:none}
+.spacer{width:28px;flex:none}
+.b{position:relative;max-width:250px;padding:8px 13px;border-radius:19px;font-size:16px;line-height:1.3;word-wrap:break-word;white-space:pre-wrap}
+.b.in{background:var(--in-bg);color:var(--in-fg)}
+.b.out{background:var(--out-bg);color:var(--out-fg)}
+.b.pic{padding:0;background:none;overflow:visible}
+.b.pic img{display:block;max-width:230px;border-radius:19px}
+.b.tail.in::before{content:"";position:absolute;left:-6px;bottom:0;width:13px;height:18px;background:var(--in-bg);border-bottom-right-radius:15px}
+.b.tail.in::after{content:"";position:absolute;left:-12px;bottom:0;width:12px;height:18px;background:var(--chat-bg);border-bottom-right-radius:12px}
+.b.tail.out::before{content:"";position:absolute;right:-6px;bottom:0;width:13px;height:18px;background:var(--out-bg);border-bottom-left-radius:15px}
+.b.tail.out::after{content:"";position:absolute;right:-12px;bottom:0;width:12px;height:18px;background:var(--chat-bg);border-bottom-left-radius:12px}
+.b.pic.tail::before,.b.pic.tail::after{display:none}
+/* emoji-only messages: big, no bubble (iOS behavior for 1–3 emoji) */
+.b.jumbo{background:none;padding:0 2px;font-size:48px;line-height:1.15}
+.b.jumbo.tail::before,.b.jumbo.tail::after,.b.vid.tail::before,.b.vid.tail::after{display:none}
+/* video messages */
+.b.vid{padding:0;background:none;overflow:visible;cursor:pointer}
+.b.vid .media{display:block;width:230px;height:auto;max-height:340px;object-fit:cover;border-radius:19px;background:#1c1c1e}
+.b.vid .ph{height:150px}
+.play{position:absolute;left:50%;top:50%;width:46px;height:46px;margin:-23px 0 0 -23px;border-radius:50%;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;pointer-events:none}
+/* iOS emoji images (non-Apple devices) */
+.emj{display:inline-block;width:1.2em;height:1.2em;vertical-align:-.22em;object-fit:contain}
+#emo .grid .emj{width:30px;height:30px;vertical-align:middle}
+#emo .tabs .emj,#emo .taps .emj,#emo .tones .emj{width:22px;height:22px;vertical-align:middle}
+.tap{position:absolute;top:-13px;background:var(--in-bg);border:2px solid var(--chat-bg);border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:13px;z-index:1}
+.b.in .tap{right:-10px}
+.b.out .tap{left:-10px;background:var(--in-bg)}
+.receipt{align-self:flex-end;font-size:11px;color:var(--meta);margin:3px 2px 0}
+.receipt b{font-weight:600;color:var(--meta)}
+.wm{text-align:center;font-size:10px;color:var(--meta);padding:0 0 10px;background:var(--chat-bg)}
+.tray{background:var(--hbg);border-top:1px solid var(--hline);padding:8px 12px 14px;display:flex;align-items:center;gap:8px}
+.field{flex:1;border:1px solid var(--hline);border-radius:16px;padding:5px 12px;color:var(--meta);font-size:15px;background:var(--chat-bg)}
+.plus{width:28px;height:28px;border-radius:50%;background:var(--in-bg);color:var(--meta);display:flex;align-items:center;justify-content:center;font-size:18px}
+@media (max-width:900px){
+  .app{grid-template-columns:1fr}
+  .side{max-height:none;overflow:visible;border-right:0;border-top:1px solid var(--line);
+        padding:16px 16px calc(24px + env(safe-area-inset-bottom))}
+  .stage{order:-1;padding:10px 0 14px}
+  .viewport{max-height:none;overflow:visible;width:100%;border-radius:0;box-shadow:none}
+  .phone{width:100%;max-width:390px;margin:0 auto}
+  /* 16px stops iOS Safari auto-zooming on focus */
+  input[type=text],input[type=time],select,textarea{font-size:16px;padding:10px}
+  button{min-height:44px;padding:8px 12px}
+  .icon{min-width:44px;padding:8px}
+  .b{max-width:72%}
+}
+
+/* ---------- emoji picker ---------- */
+#emo{position:fixed;left:0;bottom:0;z-index:35;width:100%;max-width:420px;height:min(55vh,440px);
+  background:var(--panel);border:1px solid var(--line);border-radius:14px 14px 0 0;display:none;
+  flex-direction:column;box-shadow:0 -10px 40px rgba(0,0,0,.5);padding-bottom:env(safe-area-inset-bottom)}
+#emo.on{display:flex}
+#emo .top{display:flex;align-items:center;gap:6px;padding:8px}
+#emo .tones{display:flex;gap:3px;flex:1}
+#emo .tones button{width:34px;height:34px;min-height:34px;min-width:0;padding:0;border-radius:50%;font-size:17px;background:none;border-color:transparent}
+#emo .tones button[aria-pressed=true]{border-color:var(--accent2)}
+#emo .taps{display:flex;gap:4px;padding:0 8px 8px;flex-wrap:wrap}
+#emo .taps button{font-size:18px;padding:4px 9px}
+#emo .tabs{display:flex;overflow-x:auto;border-top:1px solid var(--line);border-bottom:1px solid var(--line);flex:none}
+#emo .tabs button{flex:1 0 auto;background:none;border:0;border-radius:0;font-size:20px;padding:6px 8px;min-width:0}
+#emo .tabs button[aria-pressed=true]{background:#242a33;box-shadow:inset 0 -2px var(--accent2)}
+#emo .grid{flex:1;overflow-y:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(42px,1fr));padding:6px 8px;align-content:start;-webkit-overflow-scrolling:touch}
+#emo .grid button{background:none;border:0;font-size:28px;padding:4px 0;min-height:44px;min-width:0;line-height:1}
+#emo .grid button:hover{background:#242a33}
+
+/* ---------- screenshot mode ---------- */
+body.shot .side{display:none}
+body.shot .stage{padding:0}
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:30;
+  background:#242a33;color:var(--fg);border:1px solid var(--line);border-radius:20px;
+  padding:9px 16px;font-family:var(--ui);font-size:13px;display:none}
+body.shot #toast.on{display:block}
+
+/* ---------- export result ---------- */
+#out{position:fixed;inset:0;z-index:40;background:rgba(0,0,0,.9);display:none;
+  flex-direction:column;align-items:center;gap:12px;padding:20px;overflow:auto}
+#out.on{display:flex}
+#out img{max-width:100%;max-height:70vh;border-radius:8px}
+#out p{color:var(--dim);font-family:var(--ui);font-size:13px;text-align:center;margin:0}
+
+@media (prefers-reduced-motion:no-preference){button{transition:background .12s ease}}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <p class="brand">Text message generator</p>
+
+    <div class="grp">
+      <div class="gt">Conversation</div>
+      <label class="f"><span>Chat type</span>
+        <div class="seg" id="typeSeg">
+          <button data-v="single" aria-pressed="true">Direct</button>
+          <button data-v="group" aria-pressed="false">Group</button>
+        </div>
+      </label>
+      <div class="f" style="margin-bottom:9px"><span class="mini" style="display:block;margin-bottom:4px">Chat name</span>
+        <div class="withbtn"><input type="text" id="chatName" value="Alex"><button class="icon" id="nameEmo" title="Insert emoji">😀</button></div>
+      </div>
+      <div id="avRow">
+        <span class="mini">Avatar</span>
+        <div class="row" style="align-items:center;margin:5px 0 9px">
+          <img class="thumb" id="avPrev" alt="" style="display:none">
+          <button id="avPick">Upload image</button>
+          <button id="avClear">Clear</button>
+        </div>
+      </div>
+      <div id="people" style="display:none">
+        <span class="mini">People in the chat</span>
+        <div id="pList" style="margin:6px 0"></div>
+        <button id="addP">Add person</button>
+      </div>
+    </div>
+
+    <div class="grp">
+      <div class="gt">Appearance</div>
+      <label class="f"><span>Mode</span>
+        <div class="seg" id="modeSeg">
+          <button data-v="light" aria-pressed="true">Light</button>
+          <button data-v="dark" aria-pressed="false">Dark</button>
+        </div>
+      </label>
+      <label class="f"><span>Status bar time</span><input type="text" id="devTime" value="9:41"></label>
+      <label class="f"><span>Status on last sent message</span>
+        <select id="receipt">
+          <option value="">None</option>
+          <option value="Delivered">Delivered</option>
+          <option value="Read">Read</option>
+        </select>
+      </label>
+      <label class="f" id="receiptTimeWrap" style="display:none"><span>Read time</span><input type="text" id="receiptTime" value="10:59 PM"></label>
+      <label class="f"><span>Footer note (leave empty to hide)</span><input type="text" id="watermark" value=""></label>
+    </div>
+
+    <div class="grp">
+      <div class="gt">Messages</div>
+      <div id="list"></div>
+      <div class="row" style="margin-top:8px">
+        <button id="addIn">Add received</button>
+        <button id="addOut">Add sent</button>
+        <button id="addDiv">Add time divider</button>
+      </div>
+    </div>
+
+    <div class="row">
+      <button class="btn-a" id="dl" style="flex:1">Save PNG</button>
+      <button id="shot">Screenshot mode</button>
+    </div>
+    <p class="mini" style="margin-top:10px">Everything runs in this file. Images and videos you add stay in the page. On Windows/Android, iOS emoji art loads from the internet the first time; on iPhone/Mac it's native. Drag an image or video (a file, or straight from another browser window) onto a message to add it. Tap a video in the preview to play it; the PNG shows its first frame.</p>
+  </aside>
+
+  <main class="stage">
+    <div class="viewport"><div class="phone" id="phone"></div></div>
+  </main>
+</div>
+
+<input type="file" id="filein" accept="image/*" style="display:none">
+
+<div id="emo" role="dialog" aria-label="Emoji">
+  <div class="top"><div class="tones" id="emoTones"></div><button id="emoClose">Done</button></div>
+  <div class="taps" id="emoTaps"></div>
+  <div class="tabs" id="emoTabs"></div>
+  <div class="grid" id="emoGrid"></div>
+</div>
+
+<div id="out">
+  <img id="outimg" alt="">
+  <p id="outnote">Press and hold the image, then choose Save to Photos.</p>
+  <button id="outclose">Close</button>
+</div>
+<div id="toast">Tap anywhere to exit</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const uid = () => Math.random().toString(36).slice(2,9);
+
+const APPLE = /iPhone|iPad|iPod|Macintosh/.test(navigator.userAgent);
+const EMJ_SRCS = ["https://raw.githubusercontent.com/iamcal/emoji-data/master/img-apple-64/",
+                  "https://cdn.jsdelivr.net/npm/emoji-datasource-apple@15.0.1/img/apple/64/"];
+const EMJ_BASE = EMJ_SRCS[0];
+const isEmoSeg = s => s.includes("\uFE0F") || /\p{Emoji_Presentation}|\u20E3|[\u{1F1E6}-\u{1F1FF}]/u.test(s);
+function emjCodes(e){
+  const cp = [...e].map(c => c.codePointAt(0).toString(16).padStart(4,"0"));
+  const out = [cp.join("-"), cp.filter(x => x !== "fe0f").join("-")];
+  if(cp.length === 1) out.push(cp[0] + "-fe0f");
+  return [...new Set(out)];
+}
+const emjCache = new Map(), emjPending = new Set();
+let emjTimer = 0;
+function emjLoad(e){
+  emjCache.set(e, 0);
+  const job = (async () => {
+    for(const src of EMJ_SRCS) for(const c of emjCodes(e)){
+      try{
+        const r = await fetch(src + c + ".png");
+        if(!r.ok) continue;
+        const b = await r.blob();
+        const d = await new Promise((res,rej) => { const f = new FileReader(); f.onload = () => res(f.result); f.onerror = rej; f.readAsDataURL(b); });
+        emjCache.set(e, d);
+        clearTimeout(emjTimer); emjTimer = setTimeout(render, 40);
+        return;
+      }catch(err){}
+    }
+    emjCache.set(e, null);
+  })();
+  emjPending.add(job); job.finally(() => emjPending.delete(job));
+}
+/* text → HTML with Apple emoji images embedded as data URLs (so PNG export keeps them) */
+function txt(t){
+  t = t || "";
+  if(APPLE || !SEGMENTER) return esc(t);
+  return [...SEGMENTER.segment(t)].map(({segment:s}) => {
+    if(!isEmoSeg(s)) return esc(s);
+    const d = emjCache.get(s);
+    if(d === undefined) emjLoad(s);
+    return d ? `<img class="emj" src="${d}" alt="">` : esc(s);
+  }).join("");
+}
+/* picker tiles load straight from the CDN */
+function pickerEmo(e){
+  if(APPLE) return e;
+  const c = emjCodes(e);
+  return `<img class="emj" src="${EMJ_BASE}${c[0]}.png" data-c="${c.join("|")}" data-e="${e}" alt="" loading="lazy" onerror="emjErr(this)">`;
+}
+window.emjErr = img => {
+  const c = img.dataset.c.split("|"), i = +(img.dataset.i || 0) + 1;
+  if(i < c.length){ img.dataset.i = i; img.src = EMJ_BASE + c[i] + ".png"; }
+  else img.replaceWith(img.dataset.e);
+};
+
+const TAPBACKS = [["","None"],["❤️"],["👍"],["👎"],["😂"],["‼️"],["❓"]];
+
+const state = {
+  type:"single", mode:"light", chatName:"Alex", avatar:null,
+  devTime:"9:41", receipt:"", receiptTime:"10:59 PM", watermark:"",
+  people:[{id:"p1",name:"Alex",avatar:null},{id:"p2",name:"Sam",avatar:null}],
+  items:[
+    {id:uid(),kind:"divider",text:"Today 10:58 PM"},
+    {id:uid(),kind:"msg",from:"p1",text:"Did you see that viral video of the cat playing piano? 😂",img:null,vid:null,poster:null,tap:""},
+    {id:uid(),kind:"msg",from:"me",text:"OMG yes! A million views in a day 🎹🐱",img:null,vid:null,poster:null,tap:"❤️"}
+  ]
+};
+
+/* ---------- file picker ---------- */
+let pickTarget = null;
+$("#filein").addEventListener("change", e => {
+  const f = e.target.files[0], cb = pickTarget;
+  pickTarget = null; e.target.value = "";
+  if(f && cb) cb(f);
+});
+const pickFile = (accept, cb) => { pickTarget = cb; const fi = $("#filein"); fi.accept = accept; fi.click(); };
+const pickImage = cb => pickFile("image/*", f => {
+  const r = new FileReader();
+  r.onload = () => { cb(r.result); render(); };
+  r.readAsDataURL(f);
+});
+
+/* first frame of a video → JPEG data URL (used for preview poster + PNG export) */
+function makePoster(url){
+  return new Promise(res => {
+    const v = document.createElement("video");
+    v.muted = true; v.playsInline = true; v.setAttribute("playsinline",""); v.preload = "auto";
+    let done = false;
+    const end = val => { if(done) return; done = true; v.removeAttribute("src"); v.load(); res(val); };
+    const grab = () => {
+      try{
+        const w = v.videoWidth, h = v.videoHeight;
+        if(!w || !h) return end(null);
+        const s = Math.min(1, 900/Math.max(w,h));
+        const c = document.createElement("canvas");
+        c.width = Math.round(w*s); c.height = Math.round(h*s);
+        c.getContext("2d").drawImage(v,0,0,c.width,c.height);
+        end(c.toDataURL("image/jpeg",.88));
+      }catch(e){ end(null); }
+    };
+    v.onloadedmetadata = () => {
+      const t = Math.min(0.1, (v.duration||1)/2);
+      const p = v.play();
+      if(p && p.then) p.then(() => { v.pause(); v.currentTime = t; }).catch(() => { v.currentTime = t; });
+      else v.currentTime = t;
+    };
+    v.onseeked = () => requestAnimationFrame(() => requestAnimationFrame(grab));
+    v.onerror = () => end(null);
+    setTimeout(() => end(null), 10000);
+    v.src = url; v.load();
+  });
+}
+const clearMedia = it => { if(it.vid) URL.revokeObjectURL(it.vid); it.img = null; it.vid = null; it.poster = null; it.remote = false; };
+
+/* ---------- drag & drop media onto a message ---------- */
+const fileToDataURL = f => new Promise((res,rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(f); });
+async function applyFile(it, f){
+  if(f.type.startsWith("video/")){
+    const url = URL.createObjectURL(f), poster = await makePoster(url);
+    clearMedia(it); it.vid = url; it.poster = poster;
+  } else if(f.type.startsWith("image/")){
+    const d = await fileToDataURL(f);
+    clearMedia(it); it.img = d;
+  } else return;
+  drawList(); render();
+}
+async function urlToDataURL(u){
+  if(/^data:image\//.test(u)) return u;
+  try{
+    const r = await fetch(u);
+    if(r.ok){ const b = await r.blob(); if(b.type.startsWith("image/")) return await fileToDataURL(b); }
+  }catch(e){}
+  try{
+    return await new Promise((res,rej) => {
+      const im = new Image(); im.crossOrigin = "anonymous";
+      im.onload = () => { try{ const c = document.createElement("canvas"); c.width = im.naturalWidth; c.height = im.naturalHeight; c.getContext("2d").drawImage(im,0,0); res(c.toDataURL("image/png")); }catch(e){ rej(e); } };
+      im.onerror = rej; im.src = u;
+    });
+  }catch(e){}
+  return null;
+}
+function droppedURL(dt){
+  const html = dt.getData("text/html");
+  const m = html && html.match(/<img[^>]*\ssrc=["']([^"']+)["']/i);
+  if(m) return m[1].replace(/&amp;/g,"&");
+  const list = (dt.getData("text/uri-list") || "").split(/\r?\n/).find(l => l && !l.startsWith("#"));
+  if(list) return list.trim();
+  const t = (dt.getData("text/plain") || "").trim();
+  return /^(https?:|data:image\/)/.test(t) ? t : "";
+}
+function makeDropTarget(card, it){
+  let depth = 0;
+  card.addEventListener("dragenter", e => { e.preventDefault(); depth++; card.classList.add("drop"); });
+  card.addEventListener("dragover", e => { e.preventDefault(); e.dataTransfer.dropEffect = "copy"; });
+  card.addEventListener("dragleave", () => { if(--depth <= 0){ depth = 0; card.classList.remove("drop"); } });
+  card.addEventListener("drop", async e => {
+    e.preventDefault(); depth = 0; card.classList.remove("drop");
+    const dt = e.dataTransfer;
+    const f = [...dt.files].find(x => /^(image|video)\//.test(x.type));
+    if(f) return applyFile(it, f);
+    const u = droppedURL(dt);
+    if(!u) return;
+    const d = await urlToDataURL(u);
+    clearMedia(it);
+    if(d) it.img = d; else { it.img = u; it.remote = true; }
+    drawList(); render();
+  });
+}
+
+/* ---------- emoji picker ---------- */
+const EMO = [
+["🕘","Recent",""],
+["😀","Smileys",`😀 😃 😄 😁 😆 😅 🤣 😂 🙂 🙃 🫠 😉 😊 😇 🥰 😍 🤩 😘 😗 ☺️ 😚 😙 🥲 😋 😛 😜 🤪 😝 🤑 🤗 🤭 🫢 🫣 🤫 🤔 🫡 🤐 🤨 😐 😑 😶 🫥 😶‍🌫️ 😏 😒 🙄 😬 😮‍💨 🤥 🫨 😌 😔 😪 🤤 😴 😷 🤒 🤕 🤢 🤮 🤧 🥵 🥶 🥴 😵 😵‍💫 🤯 🤠 🥳 🥸 😎 🤓 🧐 😕 🫤 😟 🙁 ☹️ 😮 😯 😲 😳 🥺 🥹 😦 😧 😨 😰 😥 😢 😭 😱 😖 😣 😞 😓 😩 😫 🥱 😤 😡 😠 🤬 😈 👿 💀 ☠️ 💩 🤡 👹 👺 👻 👽 👾 🤖 😺 😸 😹 😻 😼 😽 🙀 😿 😾 🙈 🙉 🙊 💋 💌 💘 💝 💖 💗 💓 💞 💕 💟 ❣️ 💔 ❤️‍🔥 ❤️‍🩹 ❤️ 🩷 🧡 💛 💚 💙 🩵 💜 🤎 🖤 🩶 🤍 💯 💢 💥 💫 💦 💨 🕳️ 💬 👁️‍🗨️ 🗨️ 🗯️ 💭 💤`],
+["👋","People",`👋 🤚 🖐️ ✋ 🖖 🫱 🫲 🫳 🫴 👌 🤌 🤏 ✌️ 🤞 🫰 🤟 🤘 🤙 👈 👉 👆 🖕 👇 ☝️ 🫵 👍 👎 ✊ 👊 🤛 🤜 👏 🙌 🫶 👐 🤲 🤝 🙏 ✍️ 💅 🤳 💪 🦾 🦵 🦶 👂 👃 🧠 🫀 🫁 🦷 🦴 👀 👁️ 👅 👄 🫦 👶 🧒 👦 👧 🧑 👱 👨 🧔 👩 🧓 👴 👵 🙍 🙎 🙅 🙆 💁 🙋 🧏 🙇 🤦 🤷 🧑‍💻 🧑‍🍳 🧑‍🎤 🧑‍🎓 🧑‍⚕️ 🧑‍🏫 🧑‍🔧 🧑‍🚀 👮 🕵️ 💂 👷 🤴 👸 👰 🤵 🤰 🤱 👼 🎅 🤶 🦸 🦹 🧙 🧚 🧛 🧜 🧝 🧞 🧟 💆 💇 🚶 🧍 🧎 🏃 💃 🕺 🕴️ 👯 🧖 🧗 🏌️ 🏄 🚣 🏊 ⛹️ 🏋️ 🚴 🤸 🤼 🤽 🤾 🤹 🧘 🛀 🛌 👭 👫 👬 💏 💑 👪 🗣️ 👤 👥 🫂 👣`],
+["🐶","Animals & nature",`🐶 🐱 🐭 🐹 🐰 🦊 🐻 🐼 🐻‍❄️ 🐨 🐯 🦁 🐮 🐷 🐸 🐵 🐔 🐧 🐦 🐤 🦆 🦅 🦉 🦇 🐺 🐗 🐴 🦄 🐝 🪱 🐛 🦋 🐌 🐞 🐜 🪰 🕷️ 🦂 🐢 🐍 🦎 🦖 🦕 🐙 🦑 🦐 🦞 🦀 🐡 🐠 🐟 🐬 🐳 🐋 🦈 🐊 🐅 🐆 🦓 🦍 🦧 🐘 🦛 🦏 🐪 🐫 🦒 🦘 🦬 🐃 🐂 🐄 🐎 🐖 🐏 🐑 🦙 🐐 🦌 🐕 🐩 🦮 🐕‍🦺 🐈 🐈‍⬛ 🪶 🐓 🦃 🦤 🦚 🦜 🦢 🦩 🕊️ 🐇 🦝 🦨 🦡 🦫 🦦 🦥 🐁 🐀 🐿️ 🦔 🐾 🐉 🐲 🌵 🎄 🌲 🌳 🌴 🪵 🌱 🌿 ☘️ 🍀 🎍 🪴 🎋 🍃 🍂 🍁 🍄 🐚 🪨 🌾 💐 🌷 🌹 🥀 🪷 🌺 🌸 🌼 🌻 🌞 🌝 🌛 🌜 🌚 🌕 🌖 🌗 🌘 🌑 🌒 🌓 🌔 🌙 🌎 🌍 🌏 🪐 ⭐ 🌟 ✨ ⚡ ☄️ 🔥 🌪️ 🌈 ☀️ 🌤️ ⛅ 🌥️ ☁️ 🌦️ 🌧️ ⛈️ 🌩️ 🌨️ ❄️ ☃️ ⛄ 🌬️ 💧 🫧 ☔ ☂️ 🌊`],
+["🍔","Food & drink",`🍏 🍎 🍐 🍊 🍋 🍌 🍉 🍇 🍓 🫐 🍈 🍒 🍑 🥭 🍍 🥥 🥝 🍅 🍆 🥑 🥦 🥬 🥒 🌶️ 🫑 🌽 🥕 🫒 🧄 🧅 🥔 🍠 🥐 🥯 🍞 🥖 🥨 🧀 🥚 🍳 🧈 🥞 🧇 🥓 🥩 🍗 🍖 🌭 🍔 🍟 🍕 🫓 🥪 🥙 🧆 🌮 🌯 🫔 🥗 🥘 🫕 🥫 🍝 🍜 🍲 🍛 🍣 🍱 🥟 🦪 🍤 🍙 🍚 🍘 🍥 🥠 🥮 🍢 🍡 🍧 🍨 🍦 🥧 🧁 🍰 🎂 🍮 🍭 🍬 🍫 🍿 🍩 🍪 🌰 🥜 🍯 🥛 🍼 🫖 ☕ 🍵 🧃 🥤 🧋 🍶 🍺 🍻 🥂 🍷 🥃 🍸 🍹 🧉 🍾 🧊 🥄 🍴 🍽️ 🥣 🥡 🥢 🧂`],
+["⚽","Activity",`⚽ 🏀 🏈 ⚾ 🥎 🎾 🏐 🏉 🥏 🎱 🪀 🏓 🏸 🏒 🏑 🥍 🏏 🪃 🥅 ⛳ 🪁 🏹 🎣 🤿 🥊 🥋 🎽 🛹 🛼 🛷 ⛸️ 🥌 🎿 ⛷️ 🏂 🪂 🏆 🥇 🥈 🥉 🏅 🎖️ 🏵️ 🎗️ 🎫 🎟️ 🎪 🎭 🩰 🎨 🎬 🎤 🎧 🎼 🎹 🥁 🪘 🎷 🎺 🪗 🎸 🪕 🎻 🎲 ♟️ 🎯 🎳 🎮 🎰 🧩`],
+["🚗","Travel & places",`🚗 🚕 🚙 🚌 🚎 🏎️ 🚓 🚑 🚒 🚐 🛻 🚚 🚛 🚜 🏍️ 🛵 🚲 🛴 🚨 🚔 🚍 🚘 🚖 🚡 🚠 🚟 🚃 🚋 🚞 🚝 🚄 🚅 🚈 🚂 🚆 🚇 🚊 🚉 ✈️ 🛫 🛬 🛩️ 💺 🛰️ 🚀 🛸 🚁 🛶 ⛵ 🚤 🛥️ 🛳️ ⛴️ 🚢 ⚓ ⛽ 🚧 🚦 🚥 🗺️ 🗿 🗽 🗼 🏰 🏯 🏟️ 🎡 🎢 🎠 ⛲ ⛱️ 🏖️ 🏝️ 🏜️ 🌋 ⛰️ 🏔️ 🗻 🏕️ ⛺ 🏠 🏡 🏘️ 🏚️ 🏗️ 🏭 🏢 🏬 🏣 🏤 🏥 🏦 🏨 🏪 🏫 🏩 💒 🏛️ ⛪ 🕌 🕍 🛕 🕋 ⛩️ 🗾 🎑 🏞️ 🌅 🌄 🌠 🎇 🎆 🌇 🌆 🏙️ 🌃 🌌 🌉 🌁`],
+["💡","Objects",`⌚ 📱 📲 💻 ⌨️ 🖥️ 🖨️ 🖱️ 🕹️ 💽 💾 💿 📀 📼 📷 📸 📹 🎥 📽️ 🎞️ 📞 ☎️ 📟 📠 📺 📻 🎙️ ⏰ ⌛ ⏳ 📡 🔋 🪫 🔌 💡 🔦 🕯️ 🧯 💸 💵 💴 💶 💷 🪙 💰 💳 💎 ⚖️ 🧰 🔧 🔨 🛠️ ⛏️ 🔩 ⚙️ 🧱 ⛓️ 🧲 🔫 💣 🧨 🪓 🔪 🗡️ ⚔️ 🛡️ 🚬 ⚰️ 🔮 📿 🧿 💈 ⚗️ 🔭 🔬 🩹 🩺 💊 💉 🩸 🧬 🦠 🧫 🧪 🌡️ 🧹 🧺 🧻 🚽 🚿 🛁 🧼 🪥 🪒 🧽 🧴 🛎️ 🔑 🗝️ 🚪 🪑 🛋️ 🛏️ 🧸 🪆 🖼️ 🪞 🪟 🛍️ 🛒 🎁 🎈 🎏 🎀 🪄 🪅 🎊 🎉 🎎 🏮 🎐 🧧 ✉️ 📩 📨 📧 📥 📤 📦 🏷️ 📪 📫 📬 📭 📮 📜 📃 📄 📑 🧾 📊 📈 📉 🗒️ 🗓️ 📆 📅 🗑️ 📇 🗃️ 🗳️ 🗄️ 📋 📁 📂 🗂️ 🗞️ 📰 📓 📔 📒 📕 📗 📘 📙 📚 📖 🔖 🧷 🔗 📎 🖇️ 📐 📏 🧮 📌 📍 ✂️ 🖊️ 🖋️ ✒️ 🖌️ 🖍️ 📝 ✏️ 🔍 🔎 🔏 🔐 🔒 🔓 👓 🕶️ 🥽 👔 👕 👖 🧣 🧤 🧥 🧦 👗 👘 🥻 👙 👚 👛 👜 👝 🎒 🩴 👞 👟 🥾 🥿 👠 👡 👢 👑 👒 🎩 🎓 🧢 ⛑️ 💄 💍 💼`],
+["❤️","Symbols",`✅ ☑️ ✔️ ❌ ❎ ➕ ➖ ➗ ✖️ 🟰 ♾️ ‼️ ⁉️ ❓ ❔ ❕ ❗ 〰️ 💲 ⚠️ 🚸 ⛔ 🚫 🚳 🚭 🚯 🚱 🚷 📵 🔞 ☢️ ☣️ ⬆️ ↗️ ➡️ ↘️ ⬇️ ↙️ ⬅️ ↖️ ↕️ ↔️ ↩️ ↪️ ⤴️ ⤵️ 🔃 🔄 🔙 🔚 🔛 🔜 🔝 🛐 ⚛️ ☮️ ✝️ ☪️ 🕉️ ☸️ ✡️ 🔯 🕎 ☯️ ☦️ ♈ ♉ ♊ ♋ ♌ ♍ ♎ ♏ ♐ ♑ ♒ ♓ ⛎ 🔀 🔁 🔂 ▶️ ⏩ ⏭️ ⏯️ ◀️ ⏪ ⏮️ 🔼 ⏫ 🔽 ⏬ ⏸️ ⏹️ ⏺️ 🎦 🔅 🔆 📶 📳 📴 ⚧️ ♻️ ⚜️ 🔱 📛 🔰 ⭕ ✳️ ✴️ ❇️ ©️ ®️ ™️ #️⃣ *️⃣ 0️⃣ 1️⃣ 2️⃣ 3️⃣ 4️⃣ 5️⃣ 6️⃣ 7️⃣ 8️⃣ 9️⃣ 🔟 🔠 🔡 🔢 🔣 🔤 🅰️ 🆎 🅱️ 🆑 🆒 🆓 ℹ️ 🆔 Ⓜ️ 🆕 🆖 🅾️ 🆗 🅿️ 🆘 🆙 🆚 🔴 🟠 🟡 🟢 🔵 🟣 🟤 ⚫ ⚪ 🟥 🟧 🟨 🟩 🟦 🟪 🟫 ⬛ ⬜ 🔶 🔷 🔸 🔹 🔺 🔻 💠 🔘 🔳 🔲`],
+["🏁","Flags",`🏁 🚩 🎌 🏴 🏳️ 🏳️‍🌈 🏳️‍⚧️ 🏴‍☠️ 🇺🇸 🇨🇦 🇲🇽 🇬🇧 🇮🇪 🇫🇷 🇩🇪 🇮🇹 🇪🇸 🇵🇹 🇳🇱 🇧🇪 🇨🇭 🇦🇹 🇸🇪 🇳🇴 🇩🇰 🇫🇮 🇵🇱 🇬🇷 🇹🇷 🇺🇦 🇮🇱 🇪🇬 🇿🇦 🇳🇬 🇰🇪 🇮🇳 🇨🇳 🇯🇵 🇰🇷 🇹🇼 🇭🇰 🇸🇬 🇲🇾 🇮🇩 🇹🇭 🇻🇳 🇵🇭 🇦🇺 🇳🇿 🇧🇷 🇦🇷 🇨🇱 🇨🇴 🇵🇪 🇯🇲 🇵🇷 🇦🇪 🇸🇦`]
+];
+const TONES = ["","🏻","🏼","🏽","🏾","🏿"];
+const NOTONE = new Set(["👯","🤼","👪"]);
+let skin = "", recents = [];
+const emo = {field:null, item:null, mode:"text", cat:1};
+
+function tone(e){
+  if(!skin) return e;
+  const cp = [...e];
+  if(NOTONE.has(cp[0]) || !/\p{Emoji_Modifier_Base}/u.test(cp[0])) return e;
+  let rest = cp.slice(1);
+  if(rest[0] === "\uFE0F") rest = rest.slice(1);
+  return cp[0] + skin + rest.join("");
+}
+
+function openEmoji(opts){
+  Object.assign(emo, {field:null, item:null, mode:"text"}, opts);
+  if(emo.cat === 0 && !recents.length) emo.cat = 1;
+  $("#emoTaps").style.display = emo.mode === "tap" ? "" : "none";
+  $("#emo").classList.add("on");
+  drawEmoTones(); drawEmoTabs(); drawEmoGrid();
+}
+const closeEmoji = () => $("#emo").classList.remove("on");
+
+function drawEmoTones(){
+  $("#emoTones").innerHTML = TONES.map(t => `<button data-tone="${t}" aria-pressed="${skin===t}" title="Skin tone">${pickerEmo("✋"+t)}</button>`).join("");
+}
+function drawEmoTabs(){
+  $("#emoTabs").innerHTML = EMO.map((c,i) => `<button data-i="${i}" aria-pressed="${i===emo.cat}" title="${c[1]}">${pickerEmo(c[0])}</button>`).join("");
+}
+function drawEmoGrid(){
+  const list = emo.cat === 0 ? recents : EMO[emo.cat][2].split(/\s+/).filter(Boolean).map(tone);
+  const g = $("#emoGrid");
+  g.innerHTML = list.length
+    ? list.map(e => `<button data-e="${e}">${pickerEmo(e)}</button>`).join("")
+    : `<p class="mini" style="grid-column:1/-1;padding:10px">Emoji you pick show up here.</p>`;
+  g.scrollTop = 0;
+}
+$("#emoTaps").innerHTML = TAPBACKS.map(([v,l]) => `<button data-t="${v}">${l || pickerEmo(v)}</button>`).join("");
+
+$("#emoTones").onclick = e => { const b = e.target.closest("button"); if(!b) return; skin = b.dataset.tone; drawEmoTones(); if(emo.cat) drawEmoGrid(); };
+$("#emoTabs").onclick  = e => { const b = e.target.closest("button"); if(!b) return; emo.cat = +b.dataset.i; drawEmoTabs(); drawEmoGrid(); };
+$("#emoGrid").onclick  = e => { const b = e.target.closest("button[data-e]"); if(b) pickEmoji(b.dataset.e); };
+$("#emoTaps").onclick  = e => { const b = e.target.closest("button"); if(b) setTap(b.dataset.t); };
+$("#emoClose").onclick = closeEmoji;
+/* keep keyboard focus in the text field on desktop */
+$("#emo").addEventListener("mousedown", e => { if(e.target.closest("button")) e.preventDefault(); });
+
+function setTap(v){
+  if(emo.item) emo.item.tap = v;
+  closeEmoji(); drawList(); render();
+}
+function pickEmoji(e){
+  recents = [e, ...recents.filter(x => x !== e)].slice(0,40);
+  if(emo.mode === "tap") return setTap(e);
+  const f = typeof emo.field === "string" ? $(emo.field) : emo.field;
+  if(!f) return;
+  const touched = f.dataset.touched === "1";
+  const st = touched ? f.selectionStart : f.value.length;
+  const en = touched ? f.selectionEnd : f.value.length;
+  f.value = f.value.slice(0,st) + e + f.value.slice(en);
+  const p = st + e.length;
+  f.setSelectionRange(p,p);
+  f.dataset.touched = "1";
+  f.dispatchEvent(new Event("input", {bubbles:true}));
+}
+document.addEventListener("focusin", e => { if(e.target.matches("input[type=text],textarea")) e.target.dataset.touched = "1"; });
+
+/* ---------- controls ---------- */
+function seg(el, key, after){
+  el.addEventListener("click", e => {
+    const b = e.target.closest("button"); if(!b) return;
+    state[key] = b.dataset.v;
+    [...el.children].forEach(c => c.setAttribute("aria-pressed", c===b));
+    if(after) after();
+    render();
+  });
+}
+seg($("#typeSeg"), "type", () => {
+  $("#people").style.display = state.type==="group" ? "" : "none";
+  $("#avRow").style.display  = state.type==="group" ? "none" : "";
+  drawList();
+});
+seg($("#modeSeg"), "mode");
+
+const bind = (sel, key, extra) => $(sel).addEventListener("input", e => { state[key]=e.target.value; if(extra) extra(); render(); });
+bind("#chatName","chatName", () => drawList()); bind("#devTime","devTime");
+bind("#receiptTime","receiptTime"); bind("#watermark","watermark");
+bind("#receipt","receipt", () => { $("#receiptTimeWrap").style.display = state.receipt==="Read" ? "" : "none"; });
+$("#nameEmo").onclick = () => openEmoji({field:"#chatName"});
+
+$("#avPick").onclick = () => pickImage(d => state.avatar = d);
+$("#avClear").onclick = () => { state.avatar=null; render(); };
+
+const newMsg = from => ({id:uid(),kind:"msg",from,text:"",img:null,vid:null,poster:null,tap:""});
+$("#addP").onclick = () => { state.people.push({id:uid(),name:"New person",avatar:null}); drawPeople(); drawList(); render(); };
+$("#addIn").onclick  = () => { state.items.push(newMsg(state.people[0].id)); drawList(); render(); };
+$("#addOut").onclick = () => { state.items.push(newMsg("me")); drawList(); render(); };
+$("#addDiv").onclick = () => { state.items.push({id:uid(),kind:"divider",text:"Today 11:04 PM"}); drawList(); render(); };
+
+/* ---------- people editor ---------- */
+function drawPeople(){
+  const box = $("#pList"); box.innerHTML = "";
+  state.people.forEach((p,i) => {
+    const row = document.createElement("div"); row.className = "pchip";
+    const inp = document.createElement("input"); inp.type="text"; inp.value=p.name; inp.dataset.pid = p.id;
+    inp.oninput = e => { p.name = e.target.value; drawList(); render(); };
+    const em = document.createElement("button"); em.className="icon"; em.textContent="😀"; em.title="Insert emoji";
+    em.onclick = () => openEmoji({field:`#pList [data-pid="${p.id}"]`});
+    const up = document.createElement("button"); up.className="icon"; up.textContent="🖼"; up.title="Set avatar";
+    up.onclick = () => pickImage(d => p.avatar = d);
+    const del = document.createElement("button"); del.className="icon"; del.textContent="✕"; del.title="Remove";
+    del.onclick = () => {
+      if(state.people.length<2) return;
+      state.people.splice(i,1);
+      state.items = state.items.filter(m => m.kind!=="msg" || m.from==="me" || state.people.some(q=>q.id===m.from));
+      drawPeople(); drawList(); render();
+    };
+    row.append(inp,em,up,del); box.append(row);
+  });
+}
+
+/* ---------- message editor ---------- */
+function drawList(){
+  const box = $("#list"); box.innerHTML = "";
+  state.items.forEach((it,i) => {
+    const card = document.createElement("div"); card.className = "msg";
+    const hd = document.createElement("div"); hd.className = "hd";
+
+    if(it.kind==="msg"){
+      const sel = document.createElement("select");
+      const opts = [["me","You (sent)"]].concat(
+        state.type==="group" ? state.people.map(p=>[p.id,p.name]) : [[state.people[0].id, state.chatName||"Them"]]
+      );
+      opts.forEach(([v,l]) => { const o=document.createElement("option"); o.value=v; o.textContent=l; sel.append(o); });
+      sel.value = opts.some(o=>o[0]===it.from) ? it.from : opts[1][0];
+      it.from = sel.value;
+      sel.onchange = e => { it.from = e.target.value; render(); };
+      hd.append(sel);
+    } else {
+      const tag = document.createElement("div"); tag.className="mini"; tag.style.flex="1"; tag.textContent="Time divider";
+      hd.append(tag);
+    }
+
+    const mk = (txt,title,fn) => { const b=document.createElement("button"); b.className="icon"; b.textContent=txt; b.title=title; b.onclick=fn; return b; };
+    hd.append(
+      mk("↑","Move up",()=>{ if(i>0){ state.items.splice(i-1,0,state.items.splice(i,1)[0]); drawList(); render(); }}),
+      mk("↓","Move down",()=>{ if(i<state.items.length-1){ state.items.splice(i+1,0,state.items.splice(i,1)[0]); drawList(); render(); }}),
+      mk("✕","Delete",()=>{ if(it.kind==="msg") clearMedia(it); state.items.splice(i,1); drawList(); render(); })
+    );
+    card.append(hd);
+
+    const ta = document.createElement(it.kind==="msg" ? "textarea" : "input");
+    if(it.kind!=="msg") ta.type = "text";
+    ta.dataset.id = it.id;
+    ta.value = it.text;
+    ta.oninput = e => { it.text = e.target.value; render(); };
+    card.append(ta);
+
+    if(it.kind==="msg"){
+      const row = document.createElement("div"); row.className="row"; row.style.marginTop="7px";
+      const em = mk("😀","Insert emoji",() => openEmoji({field:`#list [data-id="${it.id}"]`}));
+      const tap = document.createElement("button");
+      tap.textContent = it.tap ? `Tapback ${it.tap}` : "Tapback";
+      tap.onclick = () => openEmoji({mode:"tap", item:it});
+      const img = document.createElement("button"); img.textContent = it.img ? "Change image" : "Image";
+      img.onclick = () => pickImage(d => { clearMedia(it); it.img = d; drawList(); });
+      const vid = document.createElement("button"); vid.textContent = it.vid ? "Change video" : "Video";
+      vid.onclick = () => pickFile("video/*", f => { vid.textContent = "Loading…"; vid.disabled = true; applyFile(it, f); });
+      row.append(em, tap, img, vid);
+      if(it.img || it.vid){
+        const rm = document.createElement("button"); rm.textContent="Remove media";
+        rm.onclick = () => { clearMedia(it); drawList(); render(); };
+        row.append(rm);
+      }
+      card.append(row);
+      if(it.remote){
+        const n = document.createElement("p"); n.className="mini"; n.style.margin="6px 0 0";
+        n.textContent = "That site blocks copying its images, so Save PNG will leave this one blank. Use Screenshot mode, or save the image and drag the file in.";
+        card.append(n);
+      }
+      makeDropTarget(card, it);
+      if(it.vid && !it.poster){
+        const n = document.createElement("p"); n.className="mini"; n.style.margin="6px 0 0";
+        n.textContent = "This browser can't read frames from this video format, so the PNG shows a blank tile. Use Screenshot mode while it plays, or open the file on iPhone.";
+        card.append(n);
+      }
+    }
+    box.append(card);
+  });
+}
+
+/* ---------- preview ---------- */
+const esc = s => s.replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const initial = n => (n||"?").trim().charAt(0).toUpperCase();
+const person = id => state.people.find(p=>p.id===id);
+const SEGMENTER = (window.Intl && Intl.Segmenter) ? new Intl.Segmenter() : null;
+const PLAY = `<span class="play"><svg width="18" height="20" viewBox="0 0 18 20"><path d="M2 1.5v17L17 10z" fill="#fff"/></svg></span>`;
+
+/* 1–3 emoji and nothing else → iOS shows them big with no bubble */
+function isJumbo(t){
+  t = (t||"").replace(/\s/g,"");
+  if(!t || t.length > 60 || !SEGMENTER) return false;
+  const g = [...SEGMENTER.segment(t)].map(s => s.segment);
+  return g.length <= 3 && g.every(s => /\p{Extended_Pictographic}|[\u{1F1E6}-\u{1F1FF}]|\u20E3/u.test(s));
+}
+
+function avatarHTML(src, name, cls=""){
+  return src ? `<img class="av ${cls}" src="${src}" alt="">`
+             : `<div class="av ${cls}">${esc(initial(name))}</div>`;
+}
+
+function render(){
+  const ph = $("#phone");
+  ph.className = "phone" + (state.mode==="dark" ? " dark" : "");
+
+  const title = state.type==="group"
+    ? (state.chatName || state.people.map(p=>p.name).join(", "))
+    : state.chatName;
+
+  const headAv = state.type==="group"
+    ? `<div class="avstack">${state.people.slice(0,3).map(p=>avatarHTML(p.avatar,p.name)).join("")}</div>`
+    : avatarHTML(state.avatar, state.chatName);
+
+  const msgs = state.items;
+  let body = "";
+  msgs.forEach((it,i) => {
+    if(it.kind==="divider"){ body += `<div class="divider">${txt(it.text)}</div>`; return; }
+    const out = it.from === "me";
+    const prev = msgs[i-1], next = msgs[i+1];
+    const sameAsPrev = prev && prev.kind==="msg" && prev.from===it.from;
+    const last = !(next && next.kind==="msg" && next.from===it.from);
+    const p = out ? null : person(it.from);
+
+    if(!out && state.type==="group" && !sameAsPrev)
+      body += `<div class="sender">${txt(p ? p.name : "")}</div>`;
+
+    const tap = it.tap ? `<span class="tap">${txt(it.tap)}</span>` : "";
+    const jumbo = !it.img && !it.vid && isJumbo(it.text);
+    let inner;
+    if(it.vid) inner = (it.poster ? `<img class="media" src="${it.poster}" alt="">` : `<div class="media ph"></div>`) + PLAY + tap;
+    else if(it.img) inner = `<img src="${it.img}" alt="">${tap}`;
+    else inner = `${txt(it.text)}${tap}`;
+    const bcls = ["b", out?"out":"in", last?"tail":"", it.img?"pic":"", it.vid?"vid":"", jumbo?"jumbo":""].filter(Boolean).join(" ");
+    const bubble = `<div class="${bcls}"${it.vid ? ` data-vid="${it.id}"` : ""}>${inner}</div>`;
+
+    const avSlot = out ? "" :
+      (state.type==="group"
+        ? (last ? avatarHTML(p&&p.avatar, p&&p.name) : `<div class="spacer"></div>`)
+        : "");
+
+    body += `<div class="line ${out?"out":"in"} ${sameAsPrev?"":"gap"}">${avSlot}${bubble}</div>`;
+  });
+
+  const lastOut = [...msgs].reverse().find(m => m.kind==="msg" && m.from==="me");
+  if(state.receipt && lastOut){
+    const txt = state.receipt==="Read" ? `Read <b>${esc(state.receiptTime)}</b>` : `<b>Delivered</b>`;
+    body += `<div class="receipt">${txt}</div>`;
+  }
+
+  ph.innerHTML = `
+    <div class="sbar"><span>${esc(state.devTime)}</span>
+      <span class="sicons">${signal()}${wifi()}${battery()}</span></div>
+    <div class="head">
+      <div class="back">‹</div>
+      ${headAv}
+      <div class="hname">${txt(title)} <i>›</i></div>
+    </div>
+    <div class="thread">${body}</div>
+    ${state.watermark ? `<div class="wm">${txt(state.watermark)}</div>` : ""}
+    <div class="tray"><div class="plus">+</div><div class="field">iMessage</div></div>`;
+}
+
+/* tap a video in the preview to play it inline */
+$("#phone").addEventListener("click", e => {
+  const b = e.target.closest("[data-vid]");
+  if(!b || b.querySelector("video")) return;
+  if(document.body.classList.contains("shot")){ e.stopPropagation(); }
+  const it = state.items.find(x => x.id === b.dataset.vid);
+  if(!it || !it.vid) return;
+  b.innerHTML = `<video class="media" src="${it.vid}"${it.poster ? ` poster="${it.poster}"` : ""} playsinline autoplay></video>` + (it.tap ? `<span class="tap">${txt(it.tap)}</span>` : "");
+  const v = b.querySelector("video");
+  v.onended = () => render();
+  v.play().catch(() => { v.controls = true; });
+});
+
+function signal(){return `<svg width="18" height="12" viewBox="0 0 18 12"><g fill="currentColor">
+<rect x="0" y="7" width="3" height="5" rx="1"/><rect x="4.5" y="5" width="3" height="7" rx="1"/>
+<rect x="9" y="3" width="3" height="9" rx="1"/><rect x="13.5" y="0" width="3" height="12" rx="1"/></g></svg>`;}
+function wifi(){return `<svg width="17" height="12" viewBox="0 0 17 12"><g fill="currentColor">
+<path d="M8.5 1C5.4 1 2.7 2.2.6 4.2l1.5 1.5C3.8 4 6 3 8.5 3S13.2 4 14.9 5.7l1.5-1.5C14.3 2.2 11.6 1 8.5 1z"/>
+<path d="M8.5 5.4c-1.8 0-3.4.7-4.6 1.9l1.5 1.5c.8-.8 1.9-1.3 3.1-1.3s2.3.5 3.1 1.3l1.5-1.5c-1.2-1.2-2.8-1.9-4.6-1.9z"/>
+<circle cx="8.5" cy="10.3" r="1.7"/></g></svg>`;}
+function battery(){return `<svg width="26" height="12" viewBox="0 0 26 12">
+<rect x="0.5" y="0.5" width="21" height="11" rx="3.2" fill="none" stroke="currentColor" opacity=".4"/>
+<rect x="2.5" y="2.5" width="17" height="7" rx="1.8" fill="currentColor"/>
+<path d="M23.5 4.2v3.6c1-.3 1.3-.9 1.3-1.8s-.3-1.5-1.3-1.8z" fill="currentColor" opacity=".4"/></svg>`;}
+
+/* ---------- export ---------- */
+$("#dl").onclick = async () => {
+  const btn = $("#dl"), node = $("#phone");
+  closeEmoji();
+  render(); // swap any playing video back to its poster frame
+  btn.disabled = true; btn.textContent = "Rendering…";
+  try{
+    while(emjPending.size) await Promise.all([...emjPending]);
+    render();
+    const w = node.offsetWidth, h = node.offsetHeight, scale = 3;
+    const clone = node.cloneNode(true);
+    clone.setAttribute("xmlns","http://www.w3.org/1999/xhtml");
+    clone.style.width = w + "px";
+    const svg =
+      `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}">` +
+      `<foreignObject width="100%" height="100%">` +
+      `<style>${$("#appcss").textContent}</style>` +
+      new XMLSerializer().serializeToString(clone) +
+      `</foreignObject></svg>`;
+    const src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
+    // Safari often renders foreignObject blank on the first decode; a second pass fixes it
+    let img = new Image(); img.src = src; await img.decode();
+    img = new Image(); img.src = src; await img.decode();
+    const c = document.createElement("canvas");
+    c.width = w*scale; c.height = h*scale;
+    const ctx = c.getContext("2d");
+    ctx.fillStyle = state.mode==="dark" ? "#000" : "#fff";
+    ctx.fillRect(0,0,c.width,c.height);
+    ctx.drawImage(img,0,0,c.width,c.height);
+    const blob = await new Promise(r => c.toBlob(r, "image/png"));
+    const touch = matchMedia("(pointer:coarse)").matches;
+    const file = new File([blob], "text-message.png", {type:"image/png"});
+
+    if(touch && navigator.canShare && navigator.canShare({files:[file]})){
+      try{ await navigator.share({files:[file]}); }
+      catch(e){ if(e.name !== "AbortError") showOut(blob); }
+    } else if(touch){
+      showOut(blob);
+    } else {
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "text-message.png";
+      a.click();
+    }
+    btn.textContent = "Save PNG";
+  }catch(err){
+    console.error(err);
+    btn.textContent = "Failed — use Screenshot mode";
+    setTimeout(()=>btn.textContent="Save PNG", 3000);
+  }
+  btn.disabled = false;
+};
+
+function showOut(blob){
+  $("#outimg").src = URL.createObjectURL(blob);
+  $("#out").classList.add("on");
+}
+$("#outclose").onclick = () => $("#out").classList.remove("on");
+
+/* ---------- screenshot mode ---------- */
+$("#shot").onclick = () => {
+  closeEmoji();
+  document.body.classList.add("shot");
+  scrollTo(0,0);
+  const t = $("#toast"); t.classList.add("on");
+  setTimeout(()=>t.classList.remove("on"), 1800);
+  setTimeout(()=>addEventListener("click", exitShot), 300);
+};
+function exitShot(e){
+  if(e && e.target.closest && e.target.closest("[data-vid]")) return; // tapping a video plays it instead of exiting
+  removeEventListener("click", exitShot);
+  document.body.classList.remove("shot"); $("#toast").classList.remove("on");
+}
+
+drawPeople(); drawList(); render();
+</script>
+</body>
+</html>
